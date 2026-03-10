@@ -1,0 +1,71 @@
+@use '@angular/material' as mat;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$violet-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: Inter,
+      density: 0,
+    )
+  );
+}
+
+body {
+  color-scheme: light;
+  background-color: #f8f9fb;
+  color: #1e293b;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  height: 100%;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* ── Material Overrides ── */
+.mat-mdc-card { --mdc-elevated-card-container-color: #fff; border-radius: 12px !important; }
+.mat-mdc-table { --mat-table-background-color: transparent; }
+.mat-mdc-header-cell {
+  color: #64748b !important; font-weight: 600; text-transform: uppercase;
+  font-size: 11px; letter-spacing: 0.5px;
+}
+.mat-mdc-cell {
+  color: #334155 !important;
+  border-bottom-color: #f1f5f9 !important;
+}
+.mat-mdc-paginator { background: transparent !important; color: #64748b !important; }
+.mat-mdc-dialog-container { --mdc-dialog-container-color: #fff; }
+.mat-mdc-snack-bar-container {
+  --mdc-snackbar-container-color: #1e293b;
+  --mdc-snackbar-supporting-text-color: #fff;
+}
+.mat-mdc-menu-panel { --mat-menu-container-color: #fff; }
+.mat-mdc-select-panel { --mat-select-panel-background-color: #fff; }
+.mat-mdc-tab-header {
+  --mdc-tab-indicator-active-indicator-color: #4f46e5;
+  --mat-tab-header-active-label-text-color: #4f46e5;
+}
+.mat-mdc-form-field {
+  --mdc-outlined-text-field-outline-color: #e2e8f0;
+  --mdc-outlined-text-field-focus-outline-color: #4f46e5;
+  --mdc-outlined-text-field-label-text-color: #94a3b8;
+  --mdc-outlined-text-field-input-text-color: #1e293b;
+}
+
+/* ── Badge Utility Classes ── */
+.badge-success { background: #ecfdf5; color: #059669; }
+.badge-info { background: #eff6ff; color: #2563eb; }
+.badge-warning { background: #fffbeb; color: #d97706; }
+.badge-danger { background: #fef2f2; color: #dc2626; }
+.badge-accent { background: #eef2ff; color: #4f46e5; }
+.badge-default { background: #f1f5f9; color: #64748b; }

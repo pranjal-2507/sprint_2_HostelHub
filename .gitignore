@@ -1,0 +1,10 @@
+# Global ignores
+.DS_Store
+
+# IDEs and editors
+.vscode/
+
+# Build and dependencies
+node_modules/
+dist/
+/target
