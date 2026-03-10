@@ -1,0 +1,6 @@
+export * from './hostel.service';
+export * from './room.service';
+export * from './maintenance.service';
+export * from './fee.service';
+export * from './visitor.service';
+export * from './analytics.service';
