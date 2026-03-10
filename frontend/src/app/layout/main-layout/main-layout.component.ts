@@ -13,8 +13,7 @@ import { NavbarComponent } from '../navbar/navbar.component';
     <div class="layout-container">
       <app-navbar (toggleSidebar)="sidenav.toggle()"></app-navbar>
       <mat-sidenav-container class="sidenav-container">
-        <mat-sidenav #sidenav mode="side" opened class="sidenav"
-                     [fixedInViewport]="true" [fixedTopGap]="56">
+        <mat-sidenav #sidenav mode="side" opened class="sidenav">
           <app-sidebar></app-sidebar>
         </mat-sidenav>
         <mat-sidenav-content class="main-content">
