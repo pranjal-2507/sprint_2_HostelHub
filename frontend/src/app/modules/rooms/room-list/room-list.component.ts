@@ -13,6 +13,7 @@ import { SearchFilterComponent } from '../../../shared/components/search-filter/
 import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
 import { RoomAllocationFormComponent } from '../room-allocation-form/room-allocation-form.component';
 import { Room } from '../../../core/models';
+import { RoomService } from '../../../core/services';
 
 @Component({
   selector: 'app-room-list',
@@ -74,7 +75,7 @@ import { Room } from '../../../core/models';
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let room">
-              <button mat-icon-button><mat-icon class="action-icon">visibility</mat-icon></button>
+              <button mat-icon-button (click)="viewRoom(room)"><mat-icon class="action-icon">visibility</mat-icon></button>
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -111,21 +112,47 @@ export class RoomListComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  mockRooms: Room[] = [
-    { id: '1', hostelId: 'h1', roomNumber: '101', floor: 1, capacity: 2, occupancy: 1, type: 'double', status: 'available', amenities: ['Wi-Fi', 'AC'], pricePerMonth: 8000, allocatedStudents: ['s1'], createdAt: '', updatedAt: '' },
-    { id: '2', hostelId: 'h1', roomNumber: '102', floor: 1, capacity: 1, occupancy: 1, type: 'single', status: 'occupied', amenities: ['Wi-Fi'], pricePerMonth: 6000, allocatedStudents: ['s2'], createdAt: '', updatedAt: '' },
-    { id: '3', hostelId: 'h1', roomNumber: '201', floor: 2, capacity: 3, occupancy: 2, type: 'triple', status: 'available', amenities: ['Wi-Fi', 'Fan'], pricePerMonth: 5000, allocatedStudents: [], createdAt: '', updatedAt: '' },
-    { id: '4', hostelId: 'h1', roomNumber: '202', floor: 2, capacity: 2, occupancy: 2, type: 'double', status: 'occupied', amenities: ['Wi-Fi', 'AC'], pricePerMonth: 8000, allocatedStudents: [], createdAt: '', updatedAt: '' },
-    { id: '5', hostelId: 'h1', roomNumber: '301', floor: 3, capacity: 1, occupancy: 0, type: 'single', status: 'maintenance', amenities: ['Wi-Fi'], pricePerMonth: 6000, allocatedStudents: [], createdAt: '', updatedAt: '' },
-    { id: '6', hostelId: 'h1', roomNumber: '302', floor: 3, capacity: 4, occupancy: 0, type: 'dormitory', status: 'available', amenities: ['Fan'], pricePerMonth: 3500, allocatedStudents: [], createdAt: '', updatedAt: '' },
-    { id: '7', hostelId: 'h1', roomNumber: '303', floor: 3, capacity: 2, occupancy: 1, type: 'double', status: 'reserved', amenities: ['Wi-Fi', 'AC'], pricePerMonth: 8000, allocatedStudents: [], createdAt: '', updatedAt: '' },
-    { id: '8', hostelId: 'h1', roomNumber: '401', floor: 4, capacity: 3, occupancy: 3, type: 'triple', status: 'occupied', amenities: ['Wi-Fi', 'Fan'], pricePerMonth: 5000, allocatedStudents: [], createdAt: '', updatedAt: '' },
-  ];
+  constructor(
+    private dialog: MatDialog,
+    private roomService: RoomService
+  ) { }
 
-  constructor(private dialog: MatDialog) { }
-  ngOnInit(): void { this.dataSource.data = this.mockRooms; }
-  ngAfterViewInit(): void { this.dataSource.paginator = this.paginator; this.dataSource.sort = this.sort; }
-  applySearch(v: string): void { this.dataSource.filter = v.trim().toLowerCase(); }
-  filterByStatus(s: string): void { this.dataSource.data = s ? this.mockRooms.filter(r => r.status === s) : this.mockRooms; }
-  openAllocationDialog(): void { this.dialog.open(RoomAllocationFormComponent, { width: '480px', data: { rooms: this.mockRooms.filter(r => r.status === 'available') } }); }
+  ngOnInit(): void {
+    this.loadRooms();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+  }
+
+  loadRooms(status?: string): void {
+    this.roomService.getAll({ status }).subscribe({
+      next: (rooms) => {
+        this.dataSource.data = rooms;
+      },
+      error: (err) => console.error('Error loading rooms', err)
+    });
+  }
+
+  applySearch(v: string): void {
+    this.dataSource.filter = v.trim().toLowerCase();
+  }
+
+  filterByStatus(s: string): void {
+    this.loadRooms(s || undefined);
+  }
+
+  viewRoom(room: Room): void {
+    // Implement view logic or navigation
+    console.log('Viewing room', room);
+  }
+
+  openAllocationDialog(): void {
+    const availableRooms = this.dataSource.data.filter(r => r.status === 'available');
+    this.dialog.open(RoomAllocationFormComponent, { 
+      width: '480px', 
+      data: { rooms: availableRooms } 
+    });
+  }
 }

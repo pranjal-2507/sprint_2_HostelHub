@@ -10,6 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SearchFilterComponent } from '../../../shared/components/search-filter/search-filter.component';
 import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
 import { Visitor } from '../../../core/models';
+import { VisitorService } from '../../../core/services';
 
 @Component({
   selector: 'app-visitor-log-table',
@@ -40,7 +41,7 @@ import { Visitor } from '../../../core/models';
         </ng-container>
         <ng-container matColumnDef="checkInTime">
           <th mat-header-cell *matHeaderCellDef>Check-in</th>
-          <td mat-cell *matCellDef="let v">{{ v.checkInTime }}</td>
+          <td mat-cell *matCellDef="let v">{{ v.checkInTime | date:'shortTime' }}</td>
         </ng-container>
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef>Status</th>
@@ -52,7 +53,7 @@ import { Visitor } from '../../../core/models';
           <th mat-header-cell *matHeaderCellDef></th>
           <td mat-cell *matCellDef="let v">
             <button mat-flat-button class="checkout-btn" *ngIf="v.status === 'checked-in'" (click)="checkOut(v)">Check Out</button>
-            <span *ngIf="v.status === 'checked-out'" class="muted">{{ v.checkOutTime }}</span>
+            <span *ngIf="v.status === 'checked-out'" class="muted">{{ v.checkOutTime | date:'shortTime' }}</span>
           </td>
         </ng-container>
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -77,20 +78,41 @@ export class VisitorLogTableComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  mockVisitors: Visitor[] = [
-    { id: 'v1', hostelId: 'h1', visitorName: 'Ramesh Kumar', visitorPhone: '9876543210', purpose: 'Family visit', visitingStudent: 'Rahul Sharma', roomNumber: '101', checkInTime: '10:30 AM', status: 'checked-in', idProofType: 'aadhar', idProofNumber: '1234' },
-    { id: 'v2', hostelId: 'h1', visitorName: 'Sunita Devi', visitorPhone: '9876543211', purpose: 'Document delivery', visitingStudent: 'Priya Singh', roomNumber: '102', checkInTime: '09:15 AM', checkOutTime: '11:00 AM', status: 'checked-out', idProofType: 'pan', idProofNumber: 'ABC' },
-    { id: 'v3', hostelId: 'h1', visitorName: 'Rajan Mehta', visitorPhone: '9876543212', purpose: 'Meeting', visitingStudent: 'Amit Kumar', roomNumber: '201', checkInTime: '11:45 AM', status: 'checked-in', idProofType: 'driving_license', idProofNumber: 'DL12' },
-  ];
+  constructor(
+    private snackBar: MatSnackBar,
+    private visitorService: VisitorService
+  ) { }
 
-  constructor(private snackBar: MatSnackBar) { }
-  ngOnInit(): void { this.dataSource.data = this.mockVisitors; }
-  ngAfterViewInit(): void { this.dataSource.paginator = this.paginator; this.dataSource.sort = this.sort; }
-  applySearch(v: string): void { this.dataSource.filter = v.trim().toLowerCase(); }
+  ngOnInit(): void {
+    this.loadVisitors();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+  }
+
+  loadVisitors(): void {
+    this.visitorService.getAll().subscribe({
+      next: (visitors) => {
+        this.dataSource.data = visitors;
+      },
+      error: (err) => console.error('Error loading visitors', err)
+    });
+  }
+
+  applySearch(v: string): void {
+    this.dataSource.filter = v.trim().toLowerCase();
+  }
+
   checkOut(visitor: Visitor): void {
-    visitor.status = 'checked-out';
-    visitor.checkOutTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    this.dataSource.data = [...this.dataSource.data];
-    this.snackBar.open(`${visitor.visitorName} checked out`, 'OK', { duration: 3000 });
+    const updated = { ...visitor, status: 'checked-out' as 'checked-out', checkOutTime: new Date().toISOString() };
+    this.visitorService.update(visitor.id, updated).subscribe({
+      next: () => {
+        this.snackBar.open(`${visitor.visitorName} checked out`, 'OK', { duration: 3000 });
+        this.loadVisitors();
+      },
+      error: (err) => console.error('Error checking out visitor', err)
+    });
   }
 }

@@ -13,6 +13,7 @@ import { SearchFilterComponent } from '../../../shared/components/search-filter/
 import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
 import { MaintenanceRequestFormComponent } from '../maintenance-request-form/maintenance-request-form.component';
 import { MaintenanceRequest } from '../../../core/models';
+import { MaintenanceService } from '../../../core/services';
 
 @Component({
   selector: 'app-maintenance-list',
@@ -80,7 +81,7 @@ import { MaintenanceRequest } from '../../../core/models';
           </ng-container>
           <ng-container matColumnDef="createdAt">
             <th mat-header-cell *matHeaderCellDef>Created</th>
-            <td mat-cell *matCellDef="let r">{{ r.createdAt }}</td>
+            <td mat-cell *matCellDef="let r">{{ r.createdAt | date }}</td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
@@ -111,26 +112,49 @@ export class MaintenanceListComponent implements OnInit {
   dataSource = new MatTableDataSource<MaintenanceRequest>();
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  miniStats: any[] = [];
 
-  miniStats = [
-    { label: 'Pending', value: 5, color: '#d97706' },
-    { label: 'In Progress', value: 3, color: '#2563eb' },
-    { label: 'Resolved', value: 12, color: '#059669' },
-  ];
+  constructor(
+    private dialog: MatDialog,
+    private maintenanceService: MaintenanceService
+  ) { }
 
-  mockData: MaintenanceRequest[] = [
-    { id: '1', hostelId: 'h1', roomId: 'r1', roomNumber: '101', title: 'Leaking Faucet', description: '', category: 'plumbing', priority: 'high', status: 'pending', requestedBy: 'Rahul', createdAt: '2024-03-01', updatedAt: '' },
-    { id: '2', hostelId: 'h1', roomId: 'r2', roomNumber: '205', title: 'Broken AC', description: '', category: 'electrical', priority: 'urgent', status: 'in-progress', requestedBy: 'Priya', createdAt: '2024-03-02', updatedAt: '' },
-    { id: '3', hostelId: 'h1', roomId: 'r3', roomNumber: '312', title: 'Damaged Chair', description: '', category: 'furniture', priority: 'low', status: 'resolved', requestedBy: 'Amit', createdAt: '2024-02-28', updatedAt: '', resolvedAt: '2024-03-03' },
-    { id: '4', hostelId: 'h1', roomId: 'r4', roomNumber: '118', title: 'Room Cleaning', description: '', category: 'cleaning', priority: 'medium', status: 'pending', requestedBy: 'Sneha', createdAt: '2024-03-04', updatedAt: '' },
-    { id: '5', hostelId: 'h1', roomId: 'r5', roomNumber: '401', title: 'Power Socket Issue', description: '', category: 'electrical', priority: 'high', status: 'in-progress', requestedBy: 'Ravi', createdAt: '2024-03-03', updatedAt: '' },
-  ];
+  ngOnInit(): void {
+    this.loadRequests();
+  }
 
-  constructor(private dialog: MatDialog) { }
-  ngOnInit(): void { this.dataSource.data = this.mockData; }
-  ngAfterViewInit(): void { this.dataSource.paginator = this.paginator; this.dataSource.sort = this.sort; }
-  applySearch(v: string): void { this.dataSource.filter = v.trim().toLowerCase(); }
-  filterByStatus(s: string): void { this.dataSource.data = s ? this.mockData.filter(r => r.status === s) : this.mockData; }
-  filterByPriority(p: string): void { this.dataSource.data = p ? this.mockData.filter(r => r.priority === p) : this.mockData; }
-  openRequestDialog(): void { this.dialog.open(MaintenanceRequestFormComponent, { width: '480px' }); }
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+  }
+
+  loadRequests(status?: string): void {
+    this.maintenanceService.getAll({ status }).subscribe({
+      next: (requests) => {
+        this.dataSource.data = requests;
+        this.calculateStats(requests);
+      },
+      error: (err) => console.error('Error loading maintenance requests', err)
+    });
+  }
+
+  private calculateStats(requests: MaintenanceRequest[]): void {
+    this.miniStats = [
+      { label: 'Pending', value: requests.filter(r => r.status === 'pending').length, color: '#d97706' },
+      { label: 'In Progress', value: requests.filter(r => r.status === 'in-progress').length, color: '#2563eb' },
+      { label: 'Resolved', value: requests.filter(r => r.status === 'resolved').length, color: '#059669' },
+    ];
+  }
+
+  applySearch(v: string): void {
+    this.dataSource.filter = v.trim().toLowerCase();
+  }
+
+  filterByStatus(s: string): void {
+    this.loadRequests(s || undefined);
+  }
+
+  openRequestDialog(): void {
+    this.dialog.open(MaintenanceRequestFormComponent, { width: '480px' });
+  }
 }

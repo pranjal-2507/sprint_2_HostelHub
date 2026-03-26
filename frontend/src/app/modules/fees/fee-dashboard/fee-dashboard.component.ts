@@ -7,6 +7,7 @@ import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
 import { SearchFilterComponent } from '../../../shared/components/search-filter/search-filter.component';
 import { Fee } from '../../../core/models';
+import { FeeService } from '../../../core/services';
 
 @Component({
   selector: 'app-fee-dashboard',
@@ -109,24 +110,44 @@ export class FeeDashboardComponent implements OnInit {
   dataSource = new MatTableDataSource<Fee>();
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   overdueStudents: Fee[] = [];
+  stats: any[] = [];
 
-  stats = [
-    { label: 'Collected', value: '₹4,80,000', icon: 'account_balance_wallet', color: '#059669', bg: '#ecfdf5' },
-    { label: 'Pending', value: '₹1,20,000', icon: 'schedule', color: '#d97706', bg: '#fffbeb' },
-    { label: 'Overdue', value: '₹35,000', icon: 'warning_amber', color: '#dc2626', bg: '#fef2f2' },
-    { label: 'Students', value: '156', icon: 'people', color: '#4f46e5', bg: '#eef2ff' },
-  ];
+  constructor(private feeService: FeeService) { }
 
-  mockFees: Fee[] = [
-    { id: '1', studentId: 's1', studentName: 'Rahul Sharma', hostelId: 'h1', roomNumber: '101', totalAmount: 48000, paidAmount: 48000, pendingAmount: 0, dueDate: '2024-03-15', status: 'paid', payments: [] },
-    { id: '2', studentId: 's2', studentName: 'Priya Singh', hostelId: 'h1', roomNumber: '102', totalAmount: 36000, paidAmount: 24000, pendingAmount: 12000, dueDate: '2024-03-10', status: 'partial', payments: [] },
-    { id: '3', studentId: 's3', studentName: 'Amit Kumar', hostelId: 'h1', roomNumber: '201', totalAmount: 30000, paidAmount: 0, pendingAmount: 30000, dueDate: '2024-02-28', status: 'overdue', payments: [] },
-    { id: '4', studentId: 's4', studentName: 'Sneha Patel', hostelId: 'h1', roomNumber: '202', totalAmount: 48000, paidAmount: 48000, pendingAmount: 0, dueDate: '2024-04-01', status: 'paid', payments: [] },
-    { id: '5', studentId: 's5', studentName: 'Ravi Verma', hostelId: 'h1', roomNumber: '301', totalAmount: 36000, paidAmount: 12000, pendingAmount: 24000, dueDate: '2024-03-01', status: 'overdue', payments: [] },
-    { id: '6', studentId: 's6', studentName: 'Meena Gupta', hostelId: 'h1', roomNumber: '303', totalAmount: 48000, paidAmount: 36000, pendingAmount: 12000, dueDate: '2024-03-20', status: 'partial', payments: [] },
-  ];
+  ngOnInit(): void {
+    this.loadFees();
+  }
 
-  ngOnInit(): void { this.dataSource.data = this.mockFees; this.overdueStudents = this.mockFees.filter(f => f.status === 'overdue'); }
-  ngAfterViewInit(): void { this.dataSource.paginator = this.paginator; }
-  applySearch(v: string): void { this.dataSource.filter = v.trim().toLowerCase(); }
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+  }
+
+  loadFees(): void {
+    this.feeService.getAll().subscribe({
+      next: (fees) => {
+        this.dataSource.data = fees;
+        this.overdueStudents = fees.filter(f => f.status === 'overdue');
+        this.calculateStats(fees);
+      },
+      error: (err) => console.error('Error loading fees', err)
+    });
+  }
+
+  private calculateStats(fees: Fee[]): void {
+    const totalCollected = fees.reduce((acc, f) => acc + (f.paidAmount || 0), 0);
+    const totalPending = fees.reduce((acc, f) => acc + (f.pendingAmount || 0), 0);
+    const totalOverdue = fees.filter(f => f.status === 'overdue')
+                             .reduce((acc, f) => acc + (f.pendingAmount || 0), 0);
+
+    this.stats = [
+      { label: 'Collected', value: `₹${totalCollected.toLocaleString()}`, icon: 'account_balance_wallet', color: '#059669', bg: '#ecfdf5' },
+      { label: 'Pending', value: `₹${totalPending.toLocaleString()}`, icon: 'schedule', color: '#d97706', bg: '#fffbeb' },
+      { label: 'Overdue', value: `₹${totalOverdue.toLocaleString()}`, icon: 'warning_amber', color: '#dc2626', bg: '#fef2f2' },
+      { label: 'Students', value: fees.length.toString(), icon: 'people', color: '#4f46e5', bg: '#eef2ff' },
+    ];
+  }
+
+  applySearch(v: string): void {
+    this.dataSource.filter = v.trim().toLowerCase();
+  }
 }
