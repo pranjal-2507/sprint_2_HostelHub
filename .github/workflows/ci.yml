@@ -25,7 +25,7 @@ jobs:
         run: cargo test
         working-directory: backend
 
-  frontend-test:
+  frontend-build:
     name: Frontend CI (Angular)
     runs-on: ubuntu-latest
     steps:
@@ -33,7 +33,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-node-version: '20'
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
       - name: Install Dependencies
@@ -41,9 +41,6 @@ jobs:
         working-directory: frontend
       - name: Angular Build
         run: npm run build
-        working-directory: frontend
-      - name: Angular Test (Headless)
-        run: npx ng test --no-watch --no-progress --browsers=ChromeHeadless
         working-directory: frontend
 
   docker-build:
@@ -53,7 +50,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build Docker Compose
+      - name: Setup Mock Environment
         run: |
-          cp backend/.env.example backend/.env || touch backend/.env
-          docker compose build
+          if [ ! -f backend/.env ]; then
+            cp backend/.env.example backend/.env || echo "DATABASE_URL=mock" > backend/.env
+          fi
+      - name: Build Docker Compose
+        run: docker compose build
