@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
@@ -9,10 +9,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SearchFilterComponent } from '../../../shared/components/search-filter/search-filter.component';
 import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
-import { RoomAllocationFormComponent } from '../room-allocation-form/room-allocation-form.component';
+import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
+import { RoomFormDialogComponent } from '../room-form-dialog/room-form-dialog.component';
 import { Room } from '../../../core/models';
+import { RoomService } from '../../../core/services/room.service';
 
 @Component({
   selector: 'app-room-list',
@@ -20,112 +24,193 @@ import { Room } from '../../../core/models';
   imports: [
     CommonModule, MatTableModule, MatPaginatorModule, MatSortModule, MatCardModule,
     MatButtonModule, MatIconModule, MatDialogModule, MatSelectModule,
-    MatFormFieldModule, SearchFilterComponent, StatusBadgePipe,
+    MatFormFieldModule, MatSnackBarModule, MatTooltipModule, SearchFilterComponent, StatusBadgePipe,
   ],
   template: `
     <div class="rooms-page">
       <div class="page-header">
-        <h1 class="page-title">Room Management</h1>
-        <button mat-flat-button class="primary-btn" (click)="openAllocationDialog()">
-          <mat-icon>add</mat-icon> Allocate Room
+        <h1 class="page-title">Manage Rooms</h1>
+        <button mat-flat-button class="primary-btn" (click)="openAddDialog()">
+          <mat-icon>add</mat-icon> Add Room
         </button>
       </div>
 
-      <mat-card class="table-card">
-        <div class="toolbar">
-          <app-search-filter placeholder="Search rooms..." (searchChange)="applySearch($event)"></app-search-filter>
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Status</mat-label>
-            <mat-select (selectionChange)="filterByStatus($event.value)">
-              <mat-option value="">All</mat-option>
-              <mat-option value="available">Available</mat-option>
-              <mat-option value="occupied">Occupied</mat-option>
-              <mat-option value="maintenance">Maintenance</mat-option>
-            </mat-select>
-          </mat-form-field>
+      @if (loading) {
+        <div class="loading-state">
+          <p>Loading rooms...</p>
         </div>
-        <table mat-table [dataSource]="dataSource" matSort>
-          <ng-container matColumnDef="roomNumber">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Room</th>
-            <td mat-cell *matCellDef="let room"><strong>{{ room.roomNumber }}</strong></td>
-          </ng-container>
-          <ng-container matColumnDef="floor">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Floor</th>
-            <td mat-cell *matCellDef="let room">{{ room.floor }}</td>
-          </ng-container>
-          <ng-container matColumnDef="type">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
-            <td mat-cell *matCellDef="let room">{{ room.type | titlecase }}</td>
-          </ng-container>
-          <ng-container matColumnDef="capacity">
-            <th mat-header-cell *matHeaderCellDef>Occupancy</th>
-            <td mat-cell *matCellDef="let room">{{ room.occupancy }}/{{ room.capacity }}</td>
-          </ng-container>
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
-            <td mat-cell *matCellDef="let room">
-              <span class="badge" [ngClass]="room.status | statusBadge">{{ room.status | titlecase }}</span>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="price">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Price</th>
-            <td mat-cell *matCellDef="let room">₹{{ room.pricePerMonth | number }}</td>
-          </ng-container>
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let room">
-              <button mat-icon-button><mat-icon class="action-icon">visibility</mat-icon></button>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
-        <mat-paginator [pageSizeOptions]="[10, 25]" showFirstLastButtons></mat-paginator>
-      </mat-card>
+      } @else {
+        <mat-card class="table-card">
+          <div class="toolbar">
+            <app-search-filter placeholder="Search rooms..." (searchChange)="applySearch($event)"></app-search-filter>
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>Status</mat-label>
+              <mat-select (selectionChange)="filterByStatus($event.value)">
+                <mat-option value="">All</mat-option>
+                <mat-option value="available">Available</mat-option>
+                <mat-option value="occupied">Occupied</mat-option>
+                <mat-option value="maintenance">Maintenance</mat-option>
+                <mat-option value="reserved">Reserved</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+          <table mat-table [dataSource]="dataSource" matSort>
+            <ng-container matColumnDef="roomNumber">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Room</th>
+              <td mat-cell *matCellDef="let room"><strong>{{ room.room_number }}</strong></td>
+            </ng-container>
+            <ng-container matColumnDef="floor">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Floor</th>
+              <td mat-cell *matCellDef="let room">{{ room.floor }}</td>
+            </ng-container>
+            <ng-container matColumnDef="type">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
+              <td mat-cell *matCellDef="let room">{{ room.room_type | titlecase }}</td>
+            </ng-container>
+            <ng-container matColumnDef="capacity">
+              <th mat-header-cell *matHeaderCellDef>Capacity</th>
+              <td mat-cell *matCellDef="let room">{{ room.capacity }}</td>
+            </ng-container>
+            <ng-container matColumnDef="occupancy">
+              <th mat-header-cell *matHeaderCellDef>Occupied</th>
+              <td mat-cell *matCellDef="let room">{{ room.occupancy || 0 }}/{{ room.capacity }}</td>
+            </ng-container>
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+              <td mat-cell *matCellDef="let room">
+                <span class="badge" [ngClass]="room.status | statusBadge">{{ room.status | titlecase }}</span>
+              </td>
+            </ng-container>
+            <ng-container matColumnDef="price">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Rent</th>
+              <td mat-cell *matCellDef="let room">₹{{ room.rent | number }}</td>
+            </ng-container>
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let room">
+                <button mat-icon-button (click)="openEditDialog(room)" matTooltip="Edit">
+                  <mat-icon class="action-icon edit">edit</mat-icon>
+                </button>
+                <button mat-icon-button (click)="deleteRoom(room)" matTooltip="Delete">
+                  <mat-icon class="action-icon delete">delete</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+          </table>
+          <mat-paginator [pageSizeOptions]="[10, 25]" showFirstLastButtons></mat-paginator>
+        </mat-card>
+      }
     </div>
   `,
   styles: [`
-    .rooms-page { max-width: 1200px; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .page-title { font-size: 22px; font-weight: 600; color: #1e293b; margin: 0; }
-    .primary-btn {
-      background: #4f46e5 !important; color: #fff !important;
-      border-radius: 8px !important; font-weight: 500; height: 40px;
-    }
-    .table-card {
-      background: #fff !important; border: 1px solid #f1f5f9;
-      border-radius: 12px !important; padding: 0 !important;
-    }
+    .rooms-page { max-width: 1200px; padding: 0 16px; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .page-title { font-size: 22px; font-weight: 600; color: var(--text-main); margin: 0; }
+    .loading-state { text-align: center; padding: 40px; color: var(--text-muted); }
+    .primary-btn { background: #4f46e5 !important; color: #fff !important; border-radius: 8px !important; }
+    .table-card { background: var(--card-bg) !important; border: 1px solid var(--border-color); border-radius: 12px !important; padding: 0 !important; }
     .toolbar { display: flex; gap: 12px; align-items: center; padding: 16px 20px; flex-wrap: wrap; }
     .filter-field { max-width: 160px; }
-    table { width: 100%; }
-    strong { color: #1e293b; }
-    .badge { padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; }
-    .action-icon { color: #94a3b8; font-size: 20px; }
+    table { width: 100%; background: transparent !important; }
+    strong { color: var(--text-main); }
+    .badge { padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+    .action-icon { font-size: 20px; }
+    .action-icon.edit { color: #4f46e5; }
+    .action-icon.delete { color: #dc2626; }
     @media (max-width: 768px) { .page-header { flex-direction: column; gap: 12px; align-items: stretch; } }
   `],
 })
 export class RoomListComponent implements OnInit {
-  displayedColumns = ['roomNumber', 'floor', 'type', 'capacity', 'status', 'price', 'actions'];
-  dataSource = new MatTableDataSource<Room>();
+  displayedColumns = ['roomNumber', 'floor', 'type', 'capacity', 'occupancy', 'status', 'price', 'actions'];
+  dataSource = new MatTableDataSource<any>();
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  
+  loading = true;
+  private roomService = inject(RoomService);
+  private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
 
-  mockRooms: Room[] = [
-    { id: '1', hostelId: 'h1', roomNumber: '101', floor: 1, capacity: 2, occupancy: 1, type: 'double', status: 'available', amenities: ['Wi-Fi', 'AC'], pricePerMonth: 8000, allocatedStudents: ['s1'], createdAt: '', updatedAt: '' },
-    { id: '2', hostelId: 'h1', roomNumber: '102', floor: 1, capacity: 1, occupancy: 1, type: 'single', status: 'occupied', amenities: ['Wi-Fi'], pricePerMonth: 6000, allocatedStudents: ['s2'], createdAt: '', updatedAt: '' },
-    { id: '3', hostelId: 'h1', roomNumber: '201', floor: 2, capacity: 3, occupancy: 2, type: 'triple', status: 'available', amenities: ['Wi-Fi', 'Fan'], pricePerMonth: 5000, allocatedStudents: [], createdAt: '', updatedAt: '' },
-    { id: '4', hostelId: 'h1', roomNumber: '202', floor: 2, capacity: 2, occupancy: 2, type: 'double', status: 'occupied', amenities: ['Wi-Fi', 'AC'], pricePerMonth: 8000, allocatedStudents: [], createdAt: '', updatedAt: '' },
-    { id: '5', hostelId: 'h1', roomNumber: '301', floor: 3, capacity: 1, occupancy: 0, type: 'single', status: 'maintenance', amenities: ['Wi-Fi'], pricePerMonth: 6000, allocatedStudents: [], createdAt: '', updatedAt: '' },
-    { id: '6', hostelId: 'h1', roomNumber: '302', floor: 3, capacity: 4, occupancy: 0, type: 'dormitory', status: 'available', amenities: ['Fan'], pricePerMonth: 3500, allocatedStudents: [], createdAt: '', updatedAt: '' },
-    { id: '7', hostelId: 'h1', roomNumber: '303', floor: 3, capacity: 2, occupancy: 1, type: 'double', status: 'reserved', amenities: ['Wi-Fi', 'AC'], pricePerMonth: 8000, allocatedStudents: [], createdAt: '', updatedAt: '' },
-    { id: '8', hostelId: 'h1', roomNumber: '401', floor: 4, capacity: 3, occupancy: 3, type: 'triple', status: 'occupied', amenities: ['Wi-Fi', 'Fan'], pricePerMonth: 5000, allocatedStudents: [], createdAt: '', updatedAt: '' },
-  ];
+  allRooms: any[] = [];
 
-  constructor(private dialog: MatDialog) { }
-  ngOnInit(): void { this.dataSource.data = this.mockRooms; }
-  ngAfterViewInit(): void { this.dataSource.paginator = this.paginator; this.dataSource.sort = this.sort; }
-  applySearch(v: string): void { this.dataSource.filter = v.trim().toLowerCase(); }
-  filterByStatus(s: string): void { this.dataSource.data = s ? this.mockRooms.filter(r => r.status === s) : this.mockRooms; }
-  openAllocationDialog(): void { this.dialog.open(RoomAllocationFormComponent, { width: '480px', data: { rooms: this.mockRooms.filter(r => r.status === 'available') } }); }
+  ngOnInit(): void {
+    this.fetchRooms();
+  }
+
+  fetchRooms(): void {
+    this.loading = true;
+    this.roomService.getAll().subscribe({
+      next: (data) => {
+        this.allRooms = data;
+        this.dataSource.data = data;
+        this.dataSource.paginator = this.paginator;
+        this.dataSource.sort = this.sort;
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Error fetching rooms', err);
+        this.loading = false;
+      }
+    });
+  }
+
+  applySearch(v: string): void {
+    this.dataSource.filter = v.trim().toLowerCase();
+  }
+
+  filterByStatus(s: string): void {
+    this.dataSource.data = s ? this.allRooms.filter(r => r.status === s) : this.allRooms;
+  }
+
+  openAddDialog(): void {
+    const dialogRef = this.dialog.open(RoomFormDialogComponent, { width: '520px', data: {} });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.roomService.create(result).subscribe({
+          next: () => {
+            this.fetchRooms();
+            this.snackBar.open('Room added successfully', 'Close', { duration: 3000 });
+          },
+          error: (err) => {
+            console.error('Error adding room', err);
+            this.snackBar.open('Failed to add room', 'Close', { duration: 3000 });
+          }
+        });
+      }
+    });
+  }
+
+  openEditDialog(room: any): void {
+    const dialogRef = this.dialog.open(RoomFormDialogComponent, { width: '520px', data: { room } });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Update logic here if service supports it
+        this.fetchRooms();
+        this.snackBar.open('Room updated successfully', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  deleteRoom(room: any): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '360px',
+      data: { title: 'Delete Room', message: `Are you sure you want to delete room ${room.room_number}?`, confirmText: 'Delete', color: 'warn' }
+    });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.roomService.delete(room.id).subscribe({
+          next: () => {
+            this.fetchRooms();
+            this.snackBar.open('Room deleted successfully', 'Close', { duration: 3000 });
+          },
+          error: (err) => {
+            console.error('Error deleting room', err);
+            this.snackBar.open('Failed to delete room', 'Close', { duration: 3000 });
+          }
+        });
+      }
+    });
+  }
 }

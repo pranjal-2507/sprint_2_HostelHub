@@ -25,10 +25,10 @@ import { NavbarComponent } from '../navbar/navbar.component';
     </div>
   `,
   styles: [`
-    .layout-container { display: flex; flex-direction: column; height: 100vh; }
-    .sidenav-container { flex: 1; }
-    .sidenav { width: 240px; background: #fff; border-right: 1px solid #f1f5f9; }
-    .main-content { background: #f8f9fb; }
+    .layout-container { display: flex; flex-direction: column; height: 100vh; background: var(--bg-color); }
+    .sidenav-container { flex: 1; background: transparent; }
+    .sidenav { width: 240px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); }
+    .main-content { background: var(--bg-color); }
     .content-wrapper { padding: 28px 32px; min-height: calc(100vh - 56px); }
     @media (max-width: 768px) { .content-wrapper { padding: 16px; } }
   `],

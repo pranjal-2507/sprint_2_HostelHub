@@ -20,14 +20,19 @@ pub async fn register(
     
     let result = sqlx::query(
         r#"
-        INSERT INTO users (id, name, email, password_hash, created_at)
-        VALUES ($1, $2, $3, $4, NOW())
+        INSERT INTO users (id, name, email, password_hash, role, phone, course, year, room_number, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
         "#
     )
     .bind(user_id)
     .bind(&payload.name)
     .bind(&payload.email)
     .bind(&hashed_password)
+    .bind("hosteler")
+    .bind(&payload.phone)
+    .bind(&payload.course)
+    .bind(&payload.year)
+    .bind(&payload.room_number)
     .execute(&state.db)
     .await;
     
@@ -38,6 +43,11 @@ pub async fn register(
                 id: user_id,
                 name: payload.name,
                 email: payload.email,
+                role: "hosteler".to_string(),
+                phone: payload.phone,
+                course: payload.course,
+                year: payload.year,
+                room_number: payload.room_number,
             };
             Ok(Json(AuthResponse {
                 access_token: token,
@@ -48,7 +58,7 @@ pub async fn register(
             if e.to_string().contains("duplicate key") {
                 Err((StatusCode::CONFLICT, "Email already exists".to_string()))
             } else {
-                Err((StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))
+                Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))
             }
         }
     }
@@ -59,12 +69,12 @@ pub async fn login(
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, (StatusCode, String)> {
     let record: Option<User> = sqlx::query_as::<_, User>(
-        r#"SELECT id, name, email, password_hash, created_at FROM users WHERE email = $1"#
+        r#"SELECT id, name, email, password_hash, role, phone, course, year, room_number, created_at FROM users WHERE email = $1"#
     )
     .bind(&payload.email)
     .fetch_optional(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
     
     if let Some(user) = record {
         if verify_password(&payload.password, &user.password_hash) {
@@ -75,6 +85,11 @@ pub async fn login(
                     id: user.id,
                     name: user.name,
                     email: user.email,
+                    role: user.role,
+                    phone: user.phone,
+                    course: user.course,
+                    year: user.year,
+                    room_number: user.room_number,
                 }
             }))
         } else {
@@ -93,18 +108,23 @@ pub async fn me(
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()))?;
         
     let record: Option<User> = sqlx::query_as::<_, User>(
-        "SELECT id, name, email, password_hash, created_at FROM users WHERE id = $1"
+        "SELECT id, name, email, password_hash, role, phone, course, year, room_number, created_at FROM users WHERE id = $1"
     )
     .bind(uuid)
     .fetch_optional(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
     
     if let Some(user) = record {
         Ok(Json(UserResponse {
             id: user.id,
             name: user.name,
             email: user.email,
+            role: user.role,
+            phone: user.phone,
+            course: user.course,
+            year: user.year,
+            room_number: user.room_number,
         }))
     } else {
         Err((StatusCode::NOT_FOUND, "User not found".to_string()))

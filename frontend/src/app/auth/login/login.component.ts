@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDividerModule } from '@angular/material/divider';
 import { AuthService } from '../services/auth.service';
 
 @Component({
@@ -16,7 +17,7 @@ import { AuthService } from '../services/auth.service';
   imports: [
     CommonModule, ReactiveFormsModule, RouterModule,
     MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatProgressSpinnerModule
+    MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatDividerModule
   ],
   template: `
     <div class="auth-container">
@@ -92,8 +93,10 @@ export class LoginComponent {
       this.errorMessage = '';
 
       this.authService.login(this.loginForm.value).subscribe({
-        next: () => {
-          this.router.navigate(['/dashboard']);
+        next: (response) => {
+          const role = response.user.role;
+          const redirect = role === 'admin' ? '/admin/dashboard' : '/hosteler/dashboard';
+          this.router.navigate([redirect]);
         },
         error: (err: any) => {
           this.errorMessage = err.message || 'Invalid email or password';

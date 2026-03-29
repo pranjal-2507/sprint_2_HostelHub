@@ -31,7 +31,7 @@
 
 .auth-card {
     width: 100%;
-    max-width: 400px;
+    max-width: 420px;
     padding: 40px 32px !important;
     background: #fff !important;
     border: 1px solid #f1f5f9;
@@ -50,7 +50,7 @@
 .auth-subtitle {
     font-size: 14px;
     color: #64748b;
-    margin: 0 0 32px;
+    margin: 0 0 24px;
     text-align: center;
 }
 
@@ -71,6 +71,74 @@
     font-size: 20px;
     width: 20px;
     height: 20px;
+}
+
+/* Mock Login Section */
+.mock-login-section {
+    margin-bottom: 20px;
+}
+
+.mock-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 10px;
+    text-align: center;
+}
+
+.mock-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.mock-btn {
+    flex: 1;
+    height: 42px;
+    border-radius: 8px !important;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.admin-mock {
+    border-color: #4f46e5 !important;
+    color: #4f46e5 !important;
+}
+
+.admin-mock:hover {
+    background: #eef2ff !important;
+}
+
+.hosteler-mock {
+    border-color: #059669 !important;
+    color: #059669 !important;
+}
+
+.hosteler-mock:hover {
+    background: #ecfdf5 !important;
+}
+
+/* Divider */
+.divider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.divider-row mat-divider {
+    flex: 1;
+}
+
+.divider-text {
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
 }
 
 .auth-form {

@@ -6,8 +6,11 @@ use axum::{
 };
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use std::env;
+use std::sync::Arc;
+use uuid::Uuid;
 
 use crate::auth::service::Claims;
+use crate::db::AppState;
 
 pub struct RequireAuth(pub String);
 
@@ -39,5 +42,61 @@ where
         }
         
         Err((StatusCode::UNAUTHORIZED, "Missing or malformed Authorization header".to_string()))
+    }
+}
+
+pub struct RequireAdmin(pub String);
+
+#[async_trait]
+impl FromRequestParts<Arc<AppState>> for RequireAdmin {
+    type Rejection = (StatusCode, String);
+
+    async fn from_request_parts(parts: &mut Parts, state: &Arc<AppState>) -> Result<Self, Self::Rejection> {
+        // First check if user is authenticated
+        let RequireAuth(user_id) = RequireAuth::from_request_parts(parts, state).await?;
+        
+        let uuid = Uuid::parse_str(&user_id)
+            .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID in token".to_string()))?;
+        
+        // Query database for role
+        let role: String = sqlx::query_scalar("SELECT role FROM users WHERE id = $1")
+            .bind(uuid)
+            .fetch_one(&state.db)
+            .await
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to verify permissions".to_string()))?;
+            
+        if role == "admin" {
+            Ok(RequireAdmin(user_id))
+        } else {
+            Err((StatusCode::FORBIDDEN, "Admin permission required".to_string()))
+        }
+    }
+}
+
+pub struct RequireHosteler(pub String);
+
+#[async_trait]
+impl FromRequestParts<Arc<AppState>> for RequireHosteler {
+    type Rejection = (StatusCode, String);
+
+    async fn from_request_parts(parts: &mut Parts, state: &Arc<AppState>) -> Result<Self, Self::Rejection> {
+        // First check if user is authenticated
+        let RequireAuth(user_id) = RequireAuth::from_request_parts(parts, state).await?;
+        
+        let uuid = Uuid::parse_str(&user_id)
+            .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID in token".to_string()))?;
+        
+        // Query database for role
+        let role: String = sqlx::query_scalar("SELECT role FROM users WHERE id = $1")
+            .bind(uuid)
+            .fetch_one(&state.db)
+            .await
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to verify permissions".to_string()))?;
+            
+        if role == "hosteler" {
+            Ok(RequireHosteler(user_id))
+        } else {
+            Err((StatusCode::FORBIDDEN, "Hosteler permission required".to_string()))
+        }
     }
 }

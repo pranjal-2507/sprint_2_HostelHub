@@ -31,7 +31,7 @@ import { Room } from '../../../core/models';
           <mat-select formControlName="roomId">
             @for (room of data.rooms; track room.id) {
               <mat-option [value]="room.id">
-                Room {{ room.roomNumber }} — {{ room.type | titlecase }} ({{ room.occupancy }}/{{ room.capacity }})
+                Room {{ room.room_number }} — {{ room.room_type | titlecase }} ({{ room.occupancy || 0 }}/{{ room.capacity }})
               </mat-option>
             }
           </mat-select>

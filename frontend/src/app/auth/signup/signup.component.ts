@@ -59,7 +59,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
             <mat-error *ngIf="signupForm.get('password')?.hasError('minlength')">Password must be at least 6 characters</mat-error>
           </mat-form-field>
 
-          <button mat-flat-button class="submit-btn full-width" type="submit" [disabled]="signupForm.invalid || isLoading">
+          <button mat-flat-button class="submit-btn full-width" type="submit" [disabled]="isLoading">
             <span *ngIf="!isLoading">Create Account</span>
             <mat-spinner diameter="20" *ngIf="isLoading"></mat-spinner>
           </button>
@@ -93,20 +93,23 @@ export class SignupComponent {
     }
 
     onSubmit(): void {
-        if (this.signupForm.valid) {
-            this.isLoading = true;
-            this.errorMessage = '';
-
-            this.authService.register(this.signupForm.value).subscribe({
-                next: () => {
-                    this.snackBar.open('Account created successfully! Please log in.', 'OK', { duration: 4000 });
-                    this.router.navigate(['/login']);
-                },
-                error: (err: any) => {
-                    this.errorMessage = err.message || 'Registration failed';
-                    this.isLoading = false;
-                }
-            });
+        if (this.signupForm.invalid) {
+            this.signupForm.markAllAsTouched();
+            return;
         }
+
+        this.isLoading = true;
+        this.errorMessage = '';
+
+        this.authService.register(this.signupForm.value).subscribe({
+            next: () => {
+                this.snackBar.open('Account created successfully! Please log in.', 'OK', { duration: 4000 });
+                this.router.navigate(['/login']);
+            },
+            error: (err: any) => {
+                this.errorMessage = err.message || 'Registration failed';
+                this.isLoading = false;
+            }
+        });
     }
 }

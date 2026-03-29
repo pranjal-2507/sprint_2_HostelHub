@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { AuthResponse, LoginParams, RegisterParams, User } from '../models/auth.model';
 
@@ -9,25 +9,29 @@ import { AuthResponse, LoginParams, RegisterParams, User } from '../models/auth.
     providedIn: 'root'
 })
 export class AuthService {
-    // Use localhost:8080 per requirements for Rust backend
     private apiUrl = 'http://localhost:8080/auth';
 
     private currentUserSubject = new BehaviorSubject<User | null>(null);
     public currentUser$ = this.currentUserSubject.asObservable();
 
     constructor(private http: HttpClient, private router: Router) {
-        this.checkInitialAuth();
+        this.restoreUser();
     }
 
     public get currentUserValue(): User | null {
         return this.currentUserSubject.value;
     }
 
-    private checkInitialAuth(): void {
-        if (this.getToken()) {
-            this.getCurrentUser().subscribe({
-                error: () => this.logout()
-            });
+    /** Restore user from localStorage on app start */
+    private restoreUser(): void {
+        const stored = localStorage.getItem('current_user');
+        if (stored && this.getToken()) {
+            try {
+                const user = JSON.parse(stored) as User;
+                this.currentUserSubject.next(user);
+            } catch {
+                this.logout();
+            }
         }
     }
 
@@ -35,7 +39,7 @@ export class AuthService {
         return this.http.post<AuthResponse>(`${this.apiUrl}/login`, params).pipe(
             tap(response => {
                 this.setToken(response.access_token);
-                this.currentUserSubject.next(response.user);
+                this.setUser(response.user);
             }),
             catchError(this.handleError)
         );
@@ -49,13 +53,26 @@ export class AuthService {
 
     getCurrentUser(): Observable<User> {
         return this.http.get<User>(`${this.apiUrl}/me`).pipe(
-            tap(user => this.currentUserSubject.next(user)),
+            tap(user => this.setUser(user)),
+            catchError(this.handleError)
+        );
+    }
+
+    getHostelerDashboardData(): Observable<any> {
+        return this.http.get<any>(`http://localhost:8080/api/hosteler/dashboard`).pipe(
+            catchError(this.handleError)
+        );
+    }
+
+    getAdminDashboardData(): Observable<any> {
+        return this.http.get<any>(`http://localhost:8080/api/admin/dashboard/stats`).pipe(
             catchError(this.handleError)
         );
     }
 
     logout(): void {
         localStorage.removeItem('access_token');
+        localStorage.removeItem('current_user');
         this.currentUserSubject.next(null);
         this.router.navigate(['/login']);
     }
@@ -68,8 +85,25 @@ export class AuthService {
         localStorage.setItem('access_token', token);
     }
 
+    private setUser(user: User): void {
+        localStorage.setItem('current_user', JSON.stringify(user));
+        this.currentUserSubject.next(user);
+    }
+
     isAuthenticated(): boolean {
         return !!this.getToken();
+    }
+
+    getUserRole(): 'admin' | 'hosteler' | null {
+        return this.currentUserValue?.role || null;
+    }
+
+    isAdmin(): boolean {
+        return this.getUserRole() === 'admin';
+    }
+
+    isHosteler(): boolean {
+        return this.getUserRole() === 'hosteler';
     }
 
     private handleError(error: any) {

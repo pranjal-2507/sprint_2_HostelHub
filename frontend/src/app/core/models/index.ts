@@ -4,3 +4,6 @@ export * from './maintenance.model';
 export * from './fee.model';
 export * from './visitor.model';
 export * from './analytics.model';
+export * from './student.model';
+export * from './complaint.model';
+export * from './notice.model';
