@@ -2,7 +2,11 @@ export interface User {
     id: string;
     name: string;
     email: string;
-    role: 'student' | 'admin' | 'staff';
+    role: 'admin' | 'hosteler';
+    phone?: string;
+    course?: string;
+    year?: number;
+    roomNumber?: string;
 }
 
 export interface AuthResponse {

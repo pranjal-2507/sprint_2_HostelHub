@@ -4,3 +4,6 @@ export * from './maintenance.service';
 export * from './fee.service';
 export * from './visitor.service';
 export * from './analytics.service';
+export * from './student.service';
+export * from './complaint.service';
+export * from './notice.service';

@@ -1,23 +1,19 @@
 export interface Fee {
     id: string;
-    studentId: string;
-    studentName: string;
-    hostelId: string;
-    roomNumber: string;
-    totalAmount: number;
-    paidAmount: number;
-    pendingAmount: number;
-    dueDate: string;
-    status: 'paid' | 'partial' | 'pending' | 'overdue';
-    payments: Payment[];
+    student_id: string;
+    amount: number;
+    fee_type: string;
+    due_date: string;
+    status: 'paid' | 'pending' | 'overdue' | 'partial';
+    paid_at?: string;
+    created_at: string;
 }
 
 export interface Payment {
     id: string;
-    feeId: string;
+    fee_id: string;
     amount: number;
-    paymentDate: string;
-    paymentMethod: 'cash' | 'online' | 'cheque' | 'upi';
-    transactionId?: string;
-    receiptUrl?: string;
+    payment_date: string;
+    payment_method: string;
+    transaction_id?: string;
 }

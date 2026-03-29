@@ -10,34 +10,22 @@ export class FeeService {
     constructor(private http: HttpClient) { }
 
     getAll(): Observable<Fee[]> {
-        return this.http.get<Fee[]>(this.apiUrl);
+        return this.http.get<Fee[]>('/api/admin/fees');
     }
 
-    getByStudentId(studentId: string): Observable<Fee[]> {
-        return this.http.get<Fee[]>(`${this.apiUrl}/${studentId}`);
-    }
-
-    getById(id: string): Observable<Fee> {
-        return this.http.get<Fee>(`${this.apiUrl}/detail/${id}`);
+    getHostelerFees(): Observable<Fee[]> {
+        return this.http.get<Fee[]>('/api/hosteler/fees');
     }
 
     create(fee: Partial<Fee>): Observable<Fee> {
-        return this.http.post<Fee>(this.apiUrl, fee);
+        return this.http.post<Fee>('/api/admin/fees', fee);
     }
 
-    update(id: string, fee: Partial<Fee>): Observable<Fee> {
-        return this.http.put<Fee>(`${this.apiUrl}/${id}`, fee);
+    updateStatus(id: string, status: string): Observable<any> {
+        return this.http.put<any>(`/api/admin/fees/${id}/status/${status}`, {});
     }
 
     delete(id: string): Observable<void> {
-        return this.http.delete<void>(`${this.apiUrl}/${id}`);
-    }
-
-    recordPayment(feeId: string, payment: Partial<Payment>): Observable<Payment> {
-        return this.http.post<Payment>(`${this.apiUrl}/${feeId}/payments`, payment);
-    }
-
-    getPaymentHistory(studentId: string): Observable<Payment[]> {
-        return this.http.get<Payment[]>(`${this.apiUrl}/${studentId}/payments`);
+        return this.http.delete<void>(`/api/admin/fees/${id}`);
     }
 }

@@ -56,12 +56,12 @@ export class LogoutConfirmDialogComponent { }
   `,
   styles: [`
     .navbar {
-      background: #fff; border-bottom: 1px solid #f1f5f9; color: #334155;
+      background: var(--sidebar-bg); border-bottom: 1px solid var(--border-color); color: var(--text-main);
       position: relative; z-index: 1000;
       height: 56px; padding: 0 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     }
     .spacer { flex: 1; }
-    .notif-header { padding: 10px 16px; font-weight: 600; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9; }
+    .notif-header { padding: 10px 16px; font-weight: 600; font-size: 13px; color: var(--text-main); border-bottom: 1px solid var(--border-color); }
   `],
 })
 export class NavbarComponent {

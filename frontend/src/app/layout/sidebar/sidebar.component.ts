@@ -12,43 +12,89 @@ import { MatIconModule } from '@angular/material/icon';
     <div class="sidebar">
       <div class="brand">
         <span class="brand-name">HostelHub</span>
+        <span class="role-tag">Admin</span>
       </div>
-      <mat-nav-list class="nav-list">
-        @for (item of navItems; track item.route) {
-          <a mat-list-item [routerLink]="item.route" routerLinkActive="active-link" class="nav-item">
-            <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-            <span matListItemTitle>{{ item.label }}</span>
-          </a>
+      
+      <div class="nav-container">
+        @for (group of menuGroups; track group.title) {
+          <div class="nav-group">
+            <h3 class="group-title">{{ group.title }}</h3>
+            <mat-nav-list class="nav-list">
+              @for (item of group.items; track item.route) {
+                <a mat-list-item [routerLink]="item.route" routerLinkActive="active-link" class="nav-item">
+                  <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+                  <span matListItemTitle>{{ item.label }}</span>
+                </a>
+              }
+            </mat-nav-list>
+          </div>
         }
-      </mat-nav-list>
+      </div>
     </div>
   `,
   styles: [`
-    .sidebar { display: flex; flex-direction: column; height: 100%; }
+    .sidebar { display: flex; flex-direction: column; height: 100%; background: var(--sidebar-bg); }
     .brand {
-      padding: 16px 20px; border-bottom: 1px solid #f1f5f9;
+      padding: 24px 20px; border-bottom: 1px solid var(--border-color);
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
     }
-    .brand-name { font-size: 18px; font-weight: 700; color: #4f46e5; }
-    .nav-list { padding: 8px; flex: 1; }
+    .brand-name { font-size: 20px; font-weight: 800; color: #6366f1; letter-spacing: -0.5px; }
+    .role-tag {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      background: var(--badge-info-bg); color: var(--badge-info-text); padding: 2px 8px; border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+    
+    .nav-container { flex: 1; overflow-y: auto; padding: 0 12px 24px; }
+    .nav-group { margin-top: 20px; }
+    .group-title {
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 0 12px; margin-bottom: 8px;
+    }
+    
+    .nav-list { padding: 0 !important; }
     .nav-item {
-      border-radius: 8px !important; margin-bottom: 2px;
-      color: #64748b !important; font-size: 14px;
-      &:hover { background: #f8f9fb !important; color: #334155 !important; }
+      height: 44px !important; border-radius: 10px !important; margin-bottom: 4px;
+      color: var(--text-muted) !important; transition: all 0.2s ease;
+      
+      mat-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 12px; color: var(--text-muted); }
+      span { font-size: 14px; font-weight: 500; }
+      
+      &:hover { background: var(--bg-color) !important; color: var(--text-main) !important; }
     }
+    
     .active-link {
-      background: #eef2ff !important; color: #4f46e5 !important;
-      font-weight: 500;
-      mat-icon { color: #4f46e5; }
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+      color: #fff !important; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+      
+      mat-icon { color: #fff !important; }
+      span { font-weight: 600; }
     }
   `],
 })
 export class SidebarComponent {
-  navItems = [
-    { label: 'Dashboard', icon: 'dashboard', route: '/dashboard' },
-    { label: 'Rooms', icon: 'meeting_room', route: '/rooms' },
-    { label: 'Maintenance', icon: 'build', route: '/maintenance' },
-    { label: 'Fees', icon: 'payments', route: '/fees' },
-    { label: 'Visitors', icon: 'people', route: '/visitors' },
-    { label: 'Analytics', icon: 'bar_chart', route: '/analytics' },
+  menuGroups = [
+    {
+      title: 'Main',
+      items: [
+        { label: 'Dashboard', icon: 'dashboard', route: '/admin/dashboard' },
+      ]
+    },
+    {
+      title: 'Management',
+      items: [
+        { label: 'Rooms', icon: 'meeting_room', route: '/admin/rooms' },
+        { label: 'Students', icon: 'school', route: '/admin/students' },
+        { label: 'Fees & Payments', icon: 'payments', route: '/admin/fees' },
+      ]
+    },
+    {
+      title: 'System',
+      items: [
+        { label: 'Complaints', icon: 'report_problem', route: '/admin/complaints' },
+        { label: 'Notices', icon: 'campaign', route: '/admin/notices' },
+      ]
+    }
   ];
 }

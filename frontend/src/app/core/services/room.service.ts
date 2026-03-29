@@ -10,34 +10,34 @@ export class RoomService {
     constructor(private http: HttpClient) { }
 
     getAll(params?: { hostelId?: string; status?: string; type?: string }): Observable<Room[]> {
-        let httpParams = new HttpParams();
-        if (params?.hostelId) httpParams = httpParams.set('hostelId', params.hostelId);
-        if (params?.status) httpParams = httpParams.set('status', params.status);
-        if (params?.type) httpParams = httpParams.set('type', params.type);
-        return this.http.get<Room[]>(this.apiUrl, { params: httpParams });
+        return this.http.get<Room[]>('/api/admin/rooms');
     }
 
     getById(id: string): Observable<Room> {
-        return this.http.get<Room>(`${this.apiUrl}/${id}`);
+        return this.http.get<Room>(`/api/admin/rooms/${id}`);
     }
 
     create(room: Partial<Room>): Observable<Room> {
-        return this.http.post<Room>(this.apiUrl, room);
+        return this.http.post<Room>('/api/admin/rooms', room);
     }
 
     update(id: string, room: Partial<Room>): Observable<Room> {
-        return this.http.put<Room>(`${this.apiUrl}/${id}`, room);
+        return this.http.put<Room>(`/api/admin/rooms/${id}`, room);
     }
 
     delete(id: string): Observable<void> {
-        return this.http.delete<void>(`${this.apiUrl}/${id}`);
+        return this.http.delete<void>(`/api/admin/rooms/${id}`);
+    }
+
+    getHostelerRoomInfo(): Observable<Room> {
+        return this.http.get<Room>('/api/hosteler/room-info');
     }
 
     allocate(allocation: RoomAllocation): Observable<Room> {
-        return this.http.post<Room>(`${this.apiUrl}/allocate`, allocation);
+        return this.http.post<Room>(`/api/admin/students/${allocation.studentId}/assign-room/${allocation.roomNumber}`, {});
     }
 
     deallocate(roomId: string, studentId: string): Observable<Room> {
-        return this.http.post<Room>(`${this.apiUrl}/deallocate`, { roomId, studentId });
+        return this.http.delete<Room>(`/api/admin/students/${studentId}`);
     }
 }

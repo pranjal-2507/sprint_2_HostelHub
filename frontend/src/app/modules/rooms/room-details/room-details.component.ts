@@ -17,7 +17,7 @@ import { Room } from '../../../core/models';
       <mat-card-header>
         <mat-card-title>
           <mat-icon>meeting_room</mat-icon>
-          Room {{ room.roomNumber }}
+          Room {{ room.room_number }}
         </mat-card-title>
         <span class="status-badge" [ngClass]="room.status | statusBadge">{{ room.status | titlecase }}</span>
       </mat-card-header>
@@ -29,24 +29,16 @@ import { Room } from '../../../core/models';
           </div>
           <div class="detail-item">
             <span class="label">Type</span>
-            <span class="value">{{ room.type | titlecase }}</span>
+            <span class="value">{{ room.room_type | titlecase }}</span>
           </div>
           <div class="detail-item">
             <span class="label">Capacity</span>
-            <span class="value">{{ room.occupancy }}/{{ room.capacity }}</span>
+            <span class="value">{{ room.occupancy || 0 }}/{{ room.capacity }}</span>
           </div>
           <div class="detail-item">
             <span class="label">Price/Month</span>
-            <span class="value">₹{{ room.pricePerMonth | number }}</span>
+            <span class="value">₹{{ room.rent | number }}</span>
           </div>
-        </div>
-        <div class="amenities">
-          <span class="label">Amenities</span>
-          <mat-chip-set>
-            @for (amenity of room.amenities; track amenity) {
-              <mat-chip>{{ amenity }}</mat-chip>
-            }
-          </mat-chip-set>
         </div>
       </mat-card-content>
     </mat-card>
@@ -68,15 +60,7 @@ import { Room } from '../../../core/models';
       .label { font-size: 12px; color: rgba(148, 163, 184, 0.5); text-transform: uppercase; }
       .value { font-size: 16px; font-weight: 600; color: #f1f5f9; }
     }
-    .amenities {
-      margin-top: 16px;
-      .label { font-size: 12px; color: rgba(148, 163, 184, 0.5); display: block; margin-bottom: 8px; text-transform: uppercase; }
-    }
     .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; }
-    .badge-success { background: rgba(16, 185, 129, 0.12); color: #34d399; }
-    .badge-info { background: rgba(56, 189, 248, 0.12); color: #38bdf8; }
-    .badge-warning { background: rgba(251, 191, 36, 0.12); color: #fbbf24; }
-    .badge-accent { background: rgba(0, 212, 170, 0.12); color: #00d4aa; }
   `],
 })
 export class RoomDetailsComponent {

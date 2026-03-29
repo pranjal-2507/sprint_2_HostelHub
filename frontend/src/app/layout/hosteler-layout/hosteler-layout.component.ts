@@ -1,0 +1,36 @@
+import { Component } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
+import { MatSidenavModule } from '@angular/material/sidenav';
+import { HostelerSidebarComponent } from '../hosteler-sidebar/hosteler-sidebar.component';
+import { NavbarComponent } from '../navbar/navbar.component';
+
+@Component({
+  selector: 'app-hosteler-layout',
+  standalone: true,
+  imports: [CommonModule, RouterModule, MatSidenavModule, HostelerSidebarComponent, NavbarComponent],
+  template: `
+    <div class="layout-container">
+      <app-navbar (toggleSidebar)="sidenav.toggle()"></app-navbar>
+      <mat-sidenav-container class="sidenav-container">
+        <mat-sidenav #sidenav mode="side" opened class="sidenav">
+          <app-hosteler-sidebar></app-hosteler-sidebar>
+        </mat-sidenav>
+        <mat-sidenav-content class="main-content">
+          <div class="content-wrapper">
+            <router-outlet></router-outlet>
+          </div>
+        </mat-sidenav-content>
+      </mat-sidenav-container>
+    </div>
+  `,
+  styles: [`
+    .layout-container { display: flex; flex-direction: column; height: 100vh; background: var(--bg-color); }
+    .sidenav-container { flex: 1; background: transparent; }
+    .sidenav { width: 240px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); }
+    .main-content { background: var(--bg-color); }
+    .content-wrapper { padding: 28px 32px; min-height: calc(100vh - 56px); }
+    @media (max-width: 768px) { .content-wrapper { padding: 16px; } }
+  `],
+})
+export class HostelerLayoutComponent { }
