@@ -17,6 +17,7 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { RoomFormDialogComponent } from '../room-form-dialog/room-form-dialog.component';
 import { Room } from '../../../core/models';
 import { RoomService } from '../../../core/services/room.service';
+import { RoomService } from '../../../core/services';
 
 @Component({
   selector: 'app-room-list',
@@ -39,6 +40,7 @@ import { RoomService } from '../../../core/services/room.service';
         <div class="loading-state">
           <p>Loading rooms...</p>
         </div>
+
       } @else {
         <mat-card class="table-card">
           <div class="toolbar">
@@ -102,6 +104,44 @@ import { RoomService } from '../../../core/services/room.service';
           <mat-paginator [pageSizeOptions]="[10, 25]" showFirstLastButtons></mat-paginator>
         </mat-card>
       }
+        <table mat-table [dataSource]="dataSource" matSort>
+          <ng-container matColumnDef="roomNumber">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Room</th>
+            <td mat-cell *matCellDef="let room"><strong>{{ room.roomNumber }}</strong></td>
+          </ng-container>
+          <ng-container matColumnDef="floor">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Floor</th>
+            <td mat-cell *matCellDef="let room">{{ room.floor }}</td>
+          </ng-container>
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
+            <td mat-cell *matCellDef="let room">{{ room.type | titlecase }}</td>
+          </ng-container>
+          <ng-container matColumnDef="capacity">
+            <th mat-header-cell *matHeaderCellDef>Occupancy</th>
+            <td mat-cell *matCellDef="let room">{{ room.occupancy }}/{{ room.capacity }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
+            <td mat-cell *matCellDef="let room">
+              <span class="badge" [ngClass]="room.status | statusBadge">{{ room.status | titlecase }}</span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="price">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Price</th>
+            <td mat-cell *matCellDef="let room">₹{{ room.pricePerMonth | number }}</td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let room">
+              <button mat-icon-button (click)="viewRoom(room)"><mat-icon class="action-icon">visibility</mat-icon></button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+        <mat-paginator [pageSizeOptions]="[10, 25]" showFirstLastButtons></mat-paginator>
+      </mat-card>
     </div>
   `,
   styles: [`
@@ -153,6 +193,26 @@ export class RoomListComponent implements OnInit {
         console.error('Error fetching rooms', err);
         this.loading = false;
       }
+  constructor(
+    private dialog: MatDialog,
+    private roomService: RoomService
+  ) { }
+
+  ngOnInit(): void {
+    this.loadRooms();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+  }
+
+  loadRooms(status?: string): void {
+    this.roomService.getAll({ status }).subscribe({
+      next: (rooms) => {
+        this.dataSource.data = rooms;
+      },
+      error: (err) => console.error('Error loading rooms', err)
     });
   }
 
@@ -211,6 +271,19 @@ export class RoomListComponent implements OnInit {
           }
         });
       }
+    this.loadRooms(s || undefined);
+  }
+
+  viewRoom(room: Room): void {
+    // Implement view logic or navigation
+    console.log('Viewing room', room);
+  }
+
+  openAllocationDialog(): void {
+    const availableRooms = this.dataSource.data.filter(r => r.status === 'available');
+    this.dialog.open(RoomAllocationFormComponent, { 
+      width: '480px', 
+      data: { rooms: availableRooms } 
     });
   }
 }

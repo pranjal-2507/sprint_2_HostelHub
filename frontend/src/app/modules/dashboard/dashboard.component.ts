@@ -1,3 +1,4 @@
+
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -21,6 +22,15 @@ interface AdminDashboardData {
   recent_payments: any[];
   recent_complaints: any[];
 }
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
+import { NgxChartsModule } from '@swimlane/ngx-charts';
+import { DashboardStats, ActivityItem } from '../../core/models';
+import { HostelService, RoomService, MaintenanceService } from '../../core/services';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -164,6 +174,7 @@ interface AdminDashboardData {
   `],
 })
 export class DashboardComponent implements OnInit {
+
   private authService = inject(AuthService);
   private router = inject(Router);
 
@@ -223,6 +234,56 @@ export class DashboardComponent implements OnInit {
         console.error('Error fetching dashboard data', err);
         this.loading = false;
       }
+  statCards: any[] = [];
+  occupancyChartData: any[] = [];
+  colorScheme: any = { domain: ['#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'] };
+  recentActivity: (ActivityItem & { iconColor: string })[] = [];
+
+  constructor(
+    private hostelService: HostelService,
+    private roomService: RoomService,
+    private maintenanceService: MaintenanceService
+  ) {}
+
+  ngOnInit(): void {
+    this.loadDashboardData();
+  }
+
+  private loadDashboardData(): void {
+    forkJoin({
+      hostels: this.hostelService.getAll(),
+      rooms: this.roomService.getAll(),
+      maintenance: this.maintenanceService.getAll(),
+    }).subscribe({
+      next: (data) => {
+        this.updateStats(data);
+        this.updateChart(data.hostels, data.rooms);
+        // Activity would typically come from a dedicated activity service/endpoint
+        // For now, we'll keep the mock activity or map it from recent records
+      },
+      error: (err) => console.error('Error loading dashboard data', err)
+    });
+  }
+
+  private updateStats(data: { hostels: any[], rooms: any[], maintenance: any[] }): void {
+    const availableRooms = data.rooms.filter(r => r.status === 'available').length;
+    
+    this.statCards = [
+      { title: 'Total Hostels', value: data.hostels.length, icon: 'apartment', color: '#4f46e5', bg: '#eef2ff' },
+      { title: 'Available Rooms', value: availableRooms, icon: 'meeting_room', color: '#0891b2', bg: '#ecfeff' },
+      { title: 'Maintenance', value: data.maintenance.length, icon: 'build', color: '#d97706', bg: '#fffbeb' },
+      { title: 'Visitors Today', value: 0, icon: 'people', color: '#059669', bg: '#ecfdf5' },
+    ];
+  }
+
+  private updateChart(hostels: any[], rooms: any[]): void {
+    this.occupancyChartData = hostels.map(h => {
+      const hostelRooms = rooms.filter(r => r.hostelId === h.id);
+      const totalCapacity = hostelRooms.reduce((acc, r) => acc + r.capacity, 0);
+      const currentOccupancy = hostelRooms.reduce((acc, r) => acc + r.occupancy, 0);
+      const percentage = totalCapacity > 0 ? Math.round((currentOccupancy / totalCapacity) * 100) : 0;
+      
+      return { name: h.name, value: percentage };
     });
   }
 }

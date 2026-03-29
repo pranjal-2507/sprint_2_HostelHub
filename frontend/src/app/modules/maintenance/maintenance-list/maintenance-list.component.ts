@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { SearchFilterComponent } from '../../../shared/components/search-filter/search-filter.component';
 import { MaintenanceRequest } from '../../../core/models';
+import { MaintenanceService } from '../../../core/services';
 
 @Component({
   selector: 'app-maintenance-list',
@@ -94,6 +95,8 @@ import { MaintenanceRequest } from '../../../core/models';
           <ng-container matColumnDef="createdAt">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
             <td mat-cell *matCellDef="let r">{{ r.createdAt | date:'dd MMM' }}</td>
+            <th mat-header-cell *matHeaderCellDef>Created</th>
+            <td mat-cell *matCellDef="let r">{{ r.createdAt | date }}</td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -165,5 +168,49 @@ export class MaintenanceListComponent implements OnInit {
   filterByPriority(p: string): void {
     // Logic will be updated when service is implemented
     this.dataSource.data = [];
+  miniStats: any[] = [];
+
+  constructor(
+    private dialog: MatDialog,
+    private maintenanceService: MaintenanceService
+  ) { }
+
+  ngOnInit(): void {
+    this.loadRequests();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+  }
+
+  loadRequests(status?: string): void {
+    this.maintenanceService.getAll({ status }).subscribe({
+      next: (requests) => {
+        this.dataSource.data = requests;
+        this.calculateStats(requests);
+      },
+      error: (err) => console.error('Error loading maintenance requests', err)
+    });
+  }
+
+  private calculateStats(requests: MaintenanceRequest[]): void {
+    this.miniStats = [
+      { label: 'Pending', value: requests.filter(r => r.status === 'pending').length, color: '#d97706' },
+      { label: 'In Progress', value: requests.filter(r => r.status === 'in-progress').length, color: '#2563eb' },
+      { label: 'Resolved', value: requests.filter(r => r.status === 'resolved').length, color: '#059669' },
+    ];
+  }
+
+  applySearch(v: string): void {
+    this.dataSource.filter = v.trim().toLowerCase();
+  }
+
+  filterByStatus(s: string): void {
+    this.loadRequests(s || undefined);
+  }
+
+  openRequestDialog(): void {
+    this.dialog.open(MaintenanceRequestFormComponent, { width: '480px' });
   }
 }

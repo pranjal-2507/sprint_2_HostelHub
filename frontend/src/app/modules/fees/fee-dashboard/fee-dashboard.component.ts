@@ -13,6 +13,8 @@ import { RouterModule } from '@angular/router';
 import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
 import { SearchFilterComponent } from '../../../shared/components/search-filter/search-filter.component';
 import { FeeService } from '../../../core/services/fee.service';
+import { Fee } from '../../../core/models';
+import { FeeService } from '../../../core/services';
 
 @Component({
   selector: 'app-fee-dashboard',
@@ -223,5 +225,46 @@ export class FeeDashboardComponent implements OnInit {
         this.snackBar.open('Failed to update status', 'Close', { duration: 3000 });
       }
     });
+  }
+  overdueStudents: Fee[] = [];
+  stats: any[] = [];
+
+  constructor(private feeService: FeeService) { }
+
+  ngOnInit(): void {
+    this.loadFees();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+  }
+
+  loadFees(): void {
+    this.feeService.getAll().subscribe({
+      next: (fees) => {
+        this.dataSource.data = fees;
+        this.overdueStudents = fees.filter(f => f.status === 'overdue');
+        this.calculateStats(fees);
+      },
+      error: (err) => console.error('Error loading fees', err)
+    });
+  }
+
+  private calculateStats(fees: Fee[]): void {
+    const totalCollected = fees.reduce((acc, f) => acc + (f.paidAmount || 0), 0);
+    const totalPending = fees.reduce((acc, f) => acc + (f.pendingAmount || 0), 0);
+    const totalOverdue = fees.filter(f => f.status === 'overdue')
+                             .reduce((acc, f) => acc + (f.pendingAmount || 0), 0);
+
+    this.stats = [
+      { label: 'Collected', value: `₹${totalCollected.toLocaleString()}`, icon: 'account_balance_wallet', color: '#059669', bg: '#ecfdf5' },
+      { label: 'Pending', value: `₹${totalPending.toLocaleString()}`, icon: 'schedule', color: '#d97706', bg: '#fffbeb' },
+      { label: 'Overdue', value: `₹${totalOverdue.toLocaleString()}`, icon: 'warning_amber', color: '#dc2626', bg: '#fef2f2' },
+      { label: 'Students', value: fees.length.toString(), icon: 'people', color: '#4f46e5', bg: '#eef2ff' },
+    ];
+  }
+
+  applySearch(v: string): void {
+    this.dataSource.filter = v.trim().toLowerCase();
   }
 }

@@ -1,0 +1,59 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-test:
+    name: Backend CI (Rust)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - name: Rust Check
+        run: cargo check
+        working-directory: backend
+      - name: Rust Test
+        run: cargo test
+        working-directory: backend
+
+  frontend-build:
+    name: Frontend CI (Angular)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+        working-directory: frontend
+      - name: Angular Build
+        run: npm run build
+        working-directory: frontend
+
+  docker-build:
+    name: Docker Build Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Setup Mock Environment
+        run: |
+          if [ ! -f backend/.env ]; then
+            cp backend/.env.example backend/.env || echo "DATABASE_URL=mock" > backend/.env
+          fi
+      - name: Build Docker Compose
+        run: docker compose build
