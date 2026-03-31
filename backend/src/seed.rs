@@ -9,7 +9,7 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), sqlx::Error> {
     let admin_password = hash_password("@12345");
     let admin_email = "pranjal@gmail.com";
     
-    let admin_result = sqlx::query(
+    let _admin_result = sqlx::query(
         r#"
         INSERT INTO users (id, name, email, password_hash, role, created_at)
         VALUES ($1, $2, $3, $4, $5, NOW())

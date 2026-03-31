@@ -60,7 +60,7 @@ pub struct Room {
     pub room_number: String,
     pub floor: i32,
     pub capacity: i32,
-    pub occupancy: i32,
+    pub occupied: i32,
     pub room_type: String, // single, double, triple, dormitory
     pub status: String,    // available, occupied, maintenance, reserved
     pub price_per_month: f64,

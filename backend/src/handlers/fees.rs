@@ -1,7 +1,7 @@
 use axum::{extract::{State, Path}, Json, http::StatusCode};
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::NaiveDate;
 
 use crate::auth::middleware::{RequireAdmin, RequireAuth};
 use crate::db::AppState;

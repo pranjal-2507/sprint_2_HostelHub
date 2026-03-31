@@ -1,10 +1,9 @@
 use axum::{
-    extract::{Path, State},
+    extract::State,
     http::StatusCode,
     Json,
 };
 use std::sync::Arc;
-use uuid::Uuid;
 
 use crate::db::AppState;
 use crate::models::Visitor;

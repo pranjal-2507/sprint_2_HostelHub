@@ -3,7 +3,6 @@ mod db;
 mod handlers;
 mod models;
 mod routes;
-mod handlers;
 mod seed;
 
 use axum::http::{header, Method};
@@ -106,7 +105,7 @@ async fn main() {
         "status VARCHAR DEFAULT 'available'",
     ] {
         let parts: Vec<&str> = col.split_whitespace().collect();
-        let col_name = parts[0];
+        let _col_name = parts[0];
         let sql = format!("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS {}", col);
         let _ = sqlx::query(&sql).execute(&state.db).await;
     }
@@ -138,7 +137,7 @@ async fn main() {
         "paid_at TIMESTAMP",
     ] {
         let parts: Vec<&str> = col.split_whitespace().collect();
-        let col_name = parts[0];
+        let _col_name = parts[0];
         let sql = format!("ALTER TABLE fees ADD COLUMN IF NOT EXISTS {}", col);
         let _ = sqlx::query(&sql).execute(&state.db).await;
     }
@@ -170,7 +169,7 @@ async fn main() {
         "resolved_at TIMESTAMP",
     ] {
         let parts: Vec<&str> = col.split_whitespace().collect();
-        let col_name = parts[0];
+        let _col_name = parts[0];
         let sql = format!("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS {}", col);
         let _ = sqlx::query(&sql).execute(&state.db).await;
     }
