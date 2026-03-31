@@ -5,6 +5,7 @@ use axum::{
 };
 use std::sync::Arc;
 use uuid::Uuid;
+use sqlx::Postgres;
 
 use crate::auth::middleware::RequireAuth;
 use crate::auth::service::{generate_jwt, hash_password, verify_password};
@@ -68,7 +69,7 @@ pub async fn login(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, (StatusCode, String)> {
-    let record: Option<User> = sqlx::query_as::<_, User>(
+    let record: Option<User> = sqlx::query_as::<Postgres, User>(
         r#"SELECT id, name, email, password_hash, role, phone, course, year, room_number, created_at FROM users WHERE email = $1"#
     )
     .bind(&payload.email)
@@ -107,7 +108,7 @@ pub async fn me(
     let uuid = Uuid::parse_str(&user_id)
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()))?;
         
-    let record: Option<User> = sqlx::query_as::<_, User>(
+    let record: Option<User> = sqlx::query_as::<Postgres, User>(
         "SELECT id, name, email, password_hash, role, phone, course, year, room_number, created_at FROM users WHERE id = $1"
     )
     .bind(uuid)

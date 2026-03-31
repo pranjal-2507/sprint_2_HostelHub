@@ -5,6 +5,7 @@ use axum::{
 };
 use std::sync::Arc;
 use uuid::Uuid;
+use sqlx::Postgres;
 
 use crate::db::AppState;
 use crate::models::Hostel;
@@ -12,7 +13,7 @@ use crate::models::Hostel;
 pub async fn get_hostels(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Hostel>>, StatusCode> {
-    let hostels = sqlx::query_as::<_, Hostel>("SELECT * FROM hostels")
+    let hostels = sqlx::query_as::<Postgres, Hostel>("SELECT * FROM hostels")
         .fetch_all(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -24,7 +25,7 @@ pub async fn get_hostel_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Hostel>, StatusCode> {
-    let hostel = sqlx::query_as::<_, Hostel>("SELECT * FROM hostels WHERE id = $1")
+    let hostel = sqlx::query_as::<Postgres, Hostel>("SELECT * FROM hostels WHERE id = $1")
         .bind(id)
         .fetch_one(&state.db)
         .await
@@ -37,7 +38,7 @@ pub async fn create_hostel(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<Hostel>,
 ) -> Result<(StatusCode, Json<Hostel>), StatusCode> {
-    let hostel = sqlx::query_as::<_, Hostel>(
+    let hostel = sqlx::query_as::<Postgres, Hostel>(
         "INSERT INTO hostels (id, name, address, total_rooms, capacity, hostel_type, contact) 
          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"
     )
