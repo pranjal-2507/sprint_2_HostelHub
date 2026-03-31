@@ -198,7 +198,7 @@ async fn main() {
         "created_by UUID",
     ] {
         let parts: Vec<&str> = col.split_whitespace().collect();
-        let col_name = parts[0];
+        let _col_name = parts[0];
         let sql = format!("ALTER TABLE notices ADD COLUMN IF NOT EXISTS {}", col);
         let _ = sqlx::query(&sql).execute(&state.db).await;
     }

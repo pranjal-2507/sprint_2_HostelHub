@@ -21,7 +21,7 @@ pub struct RegisterRequest {
     pub name: String,
     pub email: String,
     pub password: String,
-    pub role: Option<String>,
+    pub _role: Option<String>,
     pub phone: Option<String>,
     pub course: Option<String>,
     pub year: Option<i32>,
@@ -190,6 +190,7 @@ pub struct Hostel {
     pub contact: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct RoomAllocation {
     pub id: Uuid,

@@ -21,6 +21,7 @@ pub async fn get_hostels(
     Ok(Json(hostels))
 }
 
+#[allow(dead_code)]
 pub async fn get_hostel_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,

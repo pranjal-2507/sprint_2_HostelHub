@@ -34,6 +34,7 @@ pub async fn get_rooms(
     Ok(Json(rooms))
 }
 
+#[allow(dead_code)]
 pub async fn get_room_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
