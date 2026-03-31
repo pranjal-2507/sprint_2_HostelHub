@@ -200,7 +200,7 @@ pub struct RoomAllocation {
     pub check_out_date: Option<NaiveDate>,
 }
 
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MaintenanceRequest {
     pub id: Uuid,
     pub room_id: Uuid,
@@ -211,7 +211,7 @@ pub struct MaintenanceRequest {
     pub created_at: NaiveDateTime,
 }
 
-#[derive(Debug, Serialize, sqlx::FromRow)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MaintenanceResponse {
     pub id: Uuid,
     pub room_id: Uuid,
