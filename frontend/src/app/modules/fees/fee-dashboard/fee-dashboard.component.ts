@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,9 +12,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { RouterModule } from '@angular/router';
 import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
 import { SearchFilterComponent } from '../../../shared/components/search-filter/search-filter.component';
-import { FeeService } from '../../../core/services/fee.service';
-import { Fee } from '../../../core/models';
 import { FeeService } from '../../../core/services';
+import { FeeResponse } from '../../../core/models';
 
 @Component({
   selector: 'app-fee-dashboard',
@@ -124,7 +123,7 @@ import { FeeService } from '../../../core/services';
     .fees-page { max-width: 1200px; padding: 0 16px; }
     .page-title { font-size: 22px; font-weight: 600; color: var(--text-main); margin: 0 0 20px; }
     .loading-state { text-align: center; padding: 40px; color: var(--text-muted); }
-    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 20px; }
     .stat-card {
       background: var(--card-bg); border-radius: 12px; padding: 20px;
       display: flex; align-items: center; gap: 14px; border: 1px solid var(--border-color);
@@ -151,26 +150,30 @@ import { FeeService } from '../../../core/services';
     @media (max-width: 900px) { .stats-grid { grid-template-columns: 1fr; } }
   `],
 })
-export class FeeDashboardComponent implements OnInit {
+export class FeeDashboardComponent implements OnInit, AfterViewInit {
   columns = ['studentName', 'roomNumber', 'amount', 'feeType', 'dueDate', 'status', 'actions'];
-  dataSource = new MatTableDataSource<any>();
+  dataSource = new MatTableDataSource<FeeResponse>();
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   
   loading = true;
   private feeService = inject(FeeService);
   private snackBar = inject(MatSnackBar);
 
-  allFees: any[] = [];
+  allFees: FeeResponse[] = [];
   overdueCount = 0;
 
   stats = [
-    { label: 'Total Collected', value: '₹0', icon: 'account_balance_wallet', color: '#059669', bg: 'var(--surface-2)' },
-    { label: 'Pending Amount', value: '₹0', icon: 'schedule', color: '#d97706', bg: 'var(--surface-2)' },
-    { label: 'Total Records', value: '0', icon: 'people', color: '#4f46e5', bg: 'var(--surface-2)' },
+    { label: 'Total Collected', value: '₹0', icon: 'account_balance_wallet', color: '#059669', bg: '#ecfdf5' },
+    { label: 'Pending Amount', value: '₹0', icon: 'schedule', color: '#d97706', bg: '#fffbeb' },
+    { label: 'Total Records', value: '0', icon: 'people', color: '#4f46e5', bg: '#eef2ff' },
   ];
 
   ngOnInit(): void {
     this.fetchFees();
+  }
+
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
   }
 
   fetchFees(): void {
@@ -179,7 +182,6 @@ export class FeeDashboardComponent implements OnInit {
       next: (data) => {
         this.allFees = data;
         this.dataSource.data = data;
-        this.dataSource.paginator = this.paginator;
         this.calculateStats();
         this.loading = false;
       },
@@ -214,7 +216,7 @@ export class FeeDashboardComponent implements OnInit {
     this.dataSource.data = s ? this.allFees.filter(f => f.status === s) : this.allFees;
   }
 
-  updateStatus(fee: any, newStatus: string): void {
+  updateStatus(fee: FeeResponse, newStatus: string): void {
     this.feeService.updateStatus(fee.id, newStatus).subscribe({
       next: () => {
         this.fetchFees();
@@ -225,46 +227,5 @@ export class FeeDashboardComponent implements OnInit {
         this.snackBar.open('Failed to update status', 'Close', { duration: 3000 });
       }
     });
-  }
-  overdueStudents: Fee[] = [];
-  stats: any[] = [];
-
-  constructor(private feeService: FeeService) { }
-
-  ngOnInit(): void {
-    this.loadFees();
-  }
-
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-  }
-
-  loadFees(): void {
-    this.feeService.getAll().subscribe({
-      next: (fees) => {
-        this.dataSource.data = fees;
-        this.overdueStudents = fees.filter(f => f.status === 'overdue');
-        this.calculateStats(fees);
-      },
-      error: (err) => console.error('Error loading fees', err)
-    });
-  }
-
-  private calculateStats(fees: Fee[]): void {
-    const totalCollected = fees.reduce((acc, f) => acc + (f.paidAmount || 0), 0);
-    const totalPending = fees.reduce((acc, f) => acc + (f.pendingAmount || 0), 0);
-    const totalOverdue = fees.filter(f => f.status === 'overdue')
-                             .reduce((acc, f) => acc + (f.pendingAmount || 0), 0);
-
-    this.stats = [
-      { label: 'Collected', value: `₹${totalCollected.toLocaleString()}`, icon: 'account_balance_wallet', color: '#059669', bg: '#ecfdf5' },
-      { label: 'Pending', value: `₹${totalPending.toLocaleString()}`, icon: 'schedule', color: '#d97706', bg: '#fffbeb' },
-      { label: 'Overdue', value: `₹${totalOverdue.toLocaleString()}`, icon: 'warning_amber', color: '#dc2626', bg: '#fef2f2' },
-      { label: 'Students', value: fees.length.toString(), icon: 'people', color: '#4f46e5', bg: '#eef2ff' },
-    ];
-  }
-
-  applySearch(v: string): void {
-    this.dataSource.filter = v.trim().toLowerCase();
   }
 }

@@ -7,11 +7,16 @@ export const apiInterceptor: HttpInterceptorFn = (req, next) => {
     
     if (isApiUrl) {
         const url = req.url.startsWith('http') ? req.url : `${environment.apiBaseUrl}${req.url}`;
+        const token = localStorage.getItem('access_token');
+        
+        let headers = req.headers.set('Content-Type', 'application/json');
+        if (token) {
+            headers = headers.set('Authorization', `Bearer ${token}`);
+        }
+
         const apiReq = req.clone({
             url: url,
-            setHeaders: {
-                'Content-Type': 'application/json',
-            },
+            headers: headers,
         });
         return next(apiReq);
     }

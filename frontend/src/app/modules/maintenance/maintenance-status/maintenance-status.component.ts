@@ -22,21 +22,21 @@ import { MaintenanceRequest } from '../../../core/models';
             <div class="timeline-dot"></div>
             <div class="timeline-content">
               <span class="timeline-label">Request Submitted</span>
-              <span class="timeline-date">{{ request.createdAt }}</span>
+              <span class="timeline-date">{{ request.created_at | date:'medium' }}</span>
             </div>
           </div>
           <div class="timeline-item" [class.completed]="request.status !== 'pending'">
             <div class="timeline-dot"></div>
             <div class="timeline-content">
-              <span class="timeline-label">In Progress</span>
-              <span class="timeline-date" *ngIf="request.assignedTo">Assigned to {{ request.assignedTo }}</span>
+              <span class="timeline-label">Investigation & Progress</span>
+              <span class="timeline-date">Status: {{ request.status | titlecase }}</span>
             </div>
           </div>
           <div class="timeline-item" [class.completed]="request.status === 'resolved'">
             <div class="timeline-dot"></div>
             <div class="timeline-content">
-              <span class="timeline-label">Resolved</span>
-              <span class="timeline-date" *ngIf="request.resolvedAt">{{ request.resolvedAt }}</span>
+              <span class="timeline-label">Resolution</span>
+              <span class="timeline-date" *ngIf="request.status === 'resolved'">Request marked as completed</span>
             </div>
           </div>
         </div>
@@ -45,33 +45,29 @@ import { MaintenanceRequest } from '../../../core/models';
   `,
   styles: [`
     .status-card {
-      background: #111d32 !important; border: 1px solid rgba(148, 163, 184, 0.06);
+      background: var(--card-bg) !important; border: 1px solid var(--border-color);
       border-radius: 16px !important;
     }
-    mat-card-header { display: flex; justify-content: space-between; align-items: center; }
-    .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; }
-    .badge-success { background: rgba(16, 185, 129, 0.12); color: #34d399; }
-    .badge-info { background: rgba(56, 189, 248, 0.12); color: #38bdf8; }
-    .badge-warning { background: rgba(251, 191, 36, 0.12); color: #fbbf24; }
-    .badge-danger { background: rgba(244, 63, 94, 0.12); color: #fb7185; }
-    .timeline { padding: 16px 0; }
+    mat-card-header { display: flex; justify-content: space-between; align-items: center; padding: 16px; }
+    .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .timeline { padding: 16px; }
     .timeline-item {
       display: flex; align-items: flex-start; gap: 16px;
       padding: 12px 0; position: relative;
       &:not(:last-child)::after {
         content: ''; position: absolute; left: 7px; top: 28px;
-        width: 2px; height: calc(100% - 16px); background: rgba(148, 163, 184, 0.1);
+        width: 2px; height: calc(100% - 16px); background: var(--border-color);
       }
-      &.completed .timeline-dot { background: #00d4aa; box-shadow: 0 0 8px rgba(0, 212, 170, 0.3); }
-      &.completed::after { background: #00d4aa !important; }
+      &.completed .timeline-dot { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.3); }
+      &.completed::after { background: #10b981 !important; }
     }
     .timeline-dot {
       width: 16px; height: 16px; border-radius: 50%;
-      background: rgba(148, 163, 184, 0.15); flex-shrink: 0; margin-top: 2px;
+      background: var(--border-color); flex-shrink: 0; margin-top: 2px;
     }
     .timeline-content { display: flex; flex-direction: column; gap: 2px; }
-    .timeline-label { color: #f1f5f9; font-weight: 500; font-size: 14px; }
-    .timeline-date { color: rgba(148, 163, 184, 0.5); font-size: 12px; }
+    .timeline-label { color: var(--text-main); font-weight: 600; font-size: 14px; }
+    .timeline-date { color: var(--text-muted); font-size: 12px; }
   `],
 })
 export class MaintenanceStatusComponent {

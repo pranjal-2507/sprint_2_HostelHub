@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
@@ -16,7 +16,6 @@ import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { RoomFormDialogComponent } from '../room-form-dialog/room-form-dialog.component';
 import { Room } from '../../../core/models';
-import { RoomService } from '../../../core/services/room.service';
 import { RoomService } from '../../../core/services';
 
 @Component({
@@ -57,7 +56,7 @@ import { RoomService } from '../../../core/services';
             </mat-form-field>
           </div>
           <table mat-table [dataSource]="dataSource" matSort>
-            <ng-container matColumnDef="roomNumber">
+            <ng-container matColumnDef="room_number">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Room</th>
               <td mat-cell *matCellDef="let room"><strong>{{ room.room_number }}</strong></td>
             </ng-container>
@@ -65,7 +64,7 @@ import { RoomService } from '../../../core/services';
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Floor</th>
               <td mat-cell *matCellDef="let room">{{ room.floor }}</td>
             </ng-container>
-            <ng-container matColumnDef="type">
+            <ng-container matColumnDef="room_type">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
               <td mat-cell *matCellDef="let room">{{ room.room_type | titlecase }}</td>
             </ng-container>
@@ -83,9 +82,9 @@ import { RoomService } from '../../../core/services';
                 <span class="badge" [ngClass]="room.status | statusBadge">{{ room.status | titlecase }}</span>
               </td>
             </ng-container>
-            <ng-container matColumnDef="price">
+            <ng-container matColumnDef="price_per_month">
               <th mat-header-cell *matHeaderCellDef mat-sort-header>Rent</th>
-              <td mat-cell *matCellDef="let room">₹{{ room.rent | number }}</td>
+              <td mat-cell *matCellDef="let room">₹{{ room.price_per_month | number }}</td>
             </ng-container>
             <ng-container matColumnDef="actions">
               <th mat-header-cell *matHeaderCellDef>Actions</th>
@@ -104,44 +103,6 @@ import { RoomService } from '../../../core/services';
           <mat-paginator [pageSizeOptions]="[10, 25]" showFirstLastButtons></mat-paginator>
         </mat-card>
       }
-        <table mat-table [dataSource]="dataSource" matSort>
-          <ng-container matColumnDef="roomNumber">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Room</th>
-            <td mat-cell *matCellDef="let room"><strong>{{ room.roomNumber }}</strong></td>
-          </ng-container>
-          <ng-container matColumnDef="floor">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Floor</th>
-            <td mat-cell *matCellDef="let room">{{ room.floor }}</td>
-          </ng-container>
-          <ng-container matColumnDef="type">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Type</th>
-            <td mat-cell *matCellDef="let room">{{ room.type | titlecase }}</td>
-          </ng-container>
-          <ng-container matColumnDef="capacity">
-            <th mat-header-cell *matHeaderCellDef>Occupancy</th>
-            <td mat-cell *matCellDef="let room">{{ room.occupancy }}/{{ room.capacity }}</td>
-          </ng-container>
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
-            <td mat-cell *matCellDef="let room">
-              <span class="badge" [ngClass]="room.status | statusBadge">{{ room.status | titlecase }}</span>
-            </td>
-          </ng-container>
-          <ng-container matColumnDef="price">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Price</th>
-            <td mat-cell *matCellDef="let room">₹{{ room.pricePerMonth | number }}</td>
-          </ng-container>
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let room">
-              <button mat-icon-button (click)="viewRoom(room)"><mat-icon class="action-icon">visibility</mat-icon></button>
-            </td>
-          </ng-container>
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
-        <mat-paginator [pageSizeOptions]="[10, 25]" showFirstLastButtons></mat-paginator>
-      </mat-card>
     </div>
   `,
   styles: [`
@@ -162,44 +123,23 @@ import { RoomService } from '../../../core/services';
     @media (max-width: 768px) { .page-header { flex-direction: column; gap: 12px; align-items: stretch; } }
   `],
 })
-export class RoomListComponent implements OnInit {
-  displayedColumns = ['roomNumber', 'floor', 'type', 'capacity', 'occupancy', 'status', 'price', 'actions'];
-  dataSource = new MatTableDataSource<any>();
+export class RoomListComponent implements OnInit, AfterViewInit {
+  displayedColumns = ['room_number', 'floor', 'room_type', 'capacity', 'occupancy', 'status', 'price_per_month', 'actions'];
+  dataSource = new MatTableDataSource<Room>();
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   
   loading = true;
-  private roomService = inject(RoomService);
-  private dialog = inject(MatDialog);
-  private snackBar = inject(MatSnackBar);
+  allRooms: Room[] = [];
 
-  allRooms: any[] = [];
-
-  ngOnInit(): void {
-    this.fetchRooms();
-  }
-
-  fetchRooms(): void {
-    this.loading = true;
-    this.roomService.getAll().subscribe({
-      next: (data) => {
-        this.allRooms = data;
-        this.dataSource.data = data;
-        this.dataSource.paginator = this.paginator;
-        this.dataSource.sort = this.sort;
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error('Error fetching rooms', err);
-        this.loading = false;
-      }
   constructor(
+    private roomService: RoomService,
     private dialog: MatDialog,
-    private roomService: RoomService
+    private snackBar: MatSnackBar
   ) { }
 
   ngOnInit(): void {
-    this.loadRooms();
+    this.fetchRooms();
   }
 
   ngAfterViewInit(): void {
@@ -207,12 +147,19 @@ export class RoomListComponent implements OnInit {
     this.dataSource.sort = this.sort;
   }
 
-  loadRooms(status?: string): void {
+  fetchRooms(status?: string): void {
+    this.loading = true;
     this.roomService.getAll({ status }).subscribe({
-      next: (rooms) => {
-        this.dataSource.data = rooms;
+      next: (data) => {
+        this.allRooms = data;
+        this.dataSource.data = data;
+        this.loading = false;
       },
-      error: (err) => console.error('Error loading rooms', err)
+      error: (err) => {
+        console.error('Error fetching rooms', err);
+        this.loading = false;
+        this.snackBar.open('Failed to load rooms', 'Close', { duration: 3000 });
+      }
     });
   }
 
@@ -221,7 +168,7 @@ export class RoomListComponent implements OnInit {
   }
 
   filterByStatus(s: string): void {
-    this.dataSource.data = s ? this.allRooms.filter(r => r.status === s) : this.allRooms;
+    this.fetchRooms(s || undefined);
   }
 
   openAddDialog(): void {
@@ -242,18 +189,17 @@ export class RoomListComponent implements OnInit {
     });
   }
 
-  openEditDialog(room: any): void {
+  openEditDialog(room: Room): void {
     const dialogRef = this.dialog.open(RoomFormDialogComponent, { width: '520px', data: { room } });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        // Update logic here if service supports it
         this.fetchRooms();
         this.snackBar.open('Room updated successfully', 'Close', { duration: 3000 });
       }
     });
   }
 
-  deleteRoom(room: any): void {
+  deleteRoom(room: Room): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '360px',
       data: { title: 'Delete Room', message: `Are you sure you want to delete room ${room.room_number}?`, confirmText: 'Delete', color: 'warn' }
@@ -271,19 +217,10 @@ export class RoomListComponent implements OnInit {
           }
         });
       }
-    this.loadRooms(s || undefined);
+    });
   }
 
   viewRoom(room: Room): void {
-    // Implement view logic or navigation
     console.log('Viewing room', room);
-  }
-
-  openAllocationDialog(): void {
-    const availableRooms = this.dataSource.data.filter(r => r.status === 'available');
-    this.dialog.open(RoomAllocationFormComponent, { 
-      width: '480px', 
-      data: { rooms: availableRooms } 
-    });
   }
 }

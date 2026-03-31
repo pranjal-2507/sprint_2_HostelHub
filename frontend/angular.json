@@ -85,7 +85,8 @@
               "buildTarget": "HostelHub:build:production"
             },
             "development": {
-              "buildTarget": "HostelHub:build:development"
+              "buildTarget": "HostelHub:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

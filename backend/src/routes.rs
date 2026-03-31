@@ -5,13 +5,8 @@ use axum::{
 use std::sync::Arc;
 
 use crate::auth::handlers::{login, me, register};
-use crate::handlers::{dashboard, rooms, students, fees, complaints, notices};
+use crate::handlers::{dashboard, students, fees, complaints, notices, room, maintenance, hostel, visitor};
 use crate::db::AppState;
-use crate::handlers::fee::{create_fee, get_fees};
-use crate::handlers::hostel::{create_hostel, get_hostels};
-use crate::handlers::maintenance::{create_maintenance_request, get_maintenance_requests};
-use crate::handlers::room::{create_room, get_rooms};
-use crate::handlers::visitor::{create_visitor, get_visitors};
 
 pub fn create_router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -20,16 +15,16 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/auth/login", post(login))
         .route("/auth/me", get(me))
 
-        
         // Dashboard routes
         .route("/api/admin/dashboard/stats", get(dashboard::get_admin_dashboard_stats))
         .route("/api/hosteler/dashboard", get(dashboard::get_hosteler_dashboard))
         .route("/api/hosteler/room-info", get(dashboard::get_hosteler_room_info))
         
-        // Room management routes (Admin only)
-        .route("/api/admin/rooms", get(rooms::get_all_rooms))
-        .route("/api/admin/rooms", post(rooms::create_room))
-        .route("/api/admin/rooms/:room_id", delete(rooms::delete_room))
+        // Room management routes
+        .route("/api/admin/rooms", get(room::get_all_rooms))
+        .route("/api/admin/rooms", post(room::create_room))
+        .route("/api/admin/rooms/:room_id", delete(room::delete_room))
+        .route("/api/rooms", get(room::get_rooms))
         
         // Student management routes (Admin only)
         .route("/api/admin/students", get(students::get_all_students))
@@ -43,6 +38,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/admin/fees/:fee_id/status/:status", put(fees::update_payment_status))
         .route("/api/admin/students/:student_id/fees", get(fees::get_student_fees))
         .route("/api/hosteler/fees", get(fees::get_my_fees))
+        .route("/api/fees", get(fees::get_my_fees)) // Alias for ease of use
         
         // Complaint management routes
         .route("/api/admin/complaints", get(complaints::get_all_complaints))
@@ -55,13 +51,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/notices", get(notices::get_all_notices))
         .route("/api/admin/notices", post(notices::create_notice))
         .route("/api/admin/notices/:notice_id", delete(notices::delete_notice))
-        .route("/api/hostels", get(get_hostels).post(create_hostel))
-        .route("/api/rooms", get(get_rooms).post(create_room))
-        .route("/api/fees", get(get_fees).post(create_fee))
-        .route(
-            "/api/maintenance",
-            get(get_maintenance_requests).post(create_maintenance_request),
-        )
-        .route("/api/visitors", get(get_visitors).post(create_visitor))
+        
+        // Other management routes
+        .route("/api/hostels", get(hostel::get_hostels).post(hostel::create_hostel))
+        .route("/api/maintenance", get(maintenance::get_maintenance_requests))
+        .route("/api/maintenance/request", post(maintenance::create_maintenance_request))
+        .route("/api/visitors", get(visitor::get_visitors).post(visitor::create_visitor))
         .with_state(state)
 }

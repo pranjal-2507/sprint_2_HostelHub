@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { Fee, Payment } from '../models';
+import { Fee, FeeResponse } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class FeeService {
@@ -9,8 +9,8 @@ export class FeeService {
 
     constructor(private http: HttpClient) { }
 
-    getAll(): Observable<Fee[]> {
-        return this.http.get<Fee[]>('/api/admin/fees');
+    getAll(): Observable<FeeResponse[]> {
+        return this.http.get<FeeResponse[]>('/api/admin/fees');
     }
 
     getHostelerFees(): Observable<Fee[]> {

@@ -1,20 +1,22 @@
 export interface MaintenanceRequest {
     id: string;
-    hostelId: string;
-    roomId: string;
-    roomNumber: string;
+    room_id: string;
     title: string;
-    description: string;
-    category: 'plumbing' | 'electrical' | 'furniture' | 'cleaning' | 'other';
-    priority: 'low' | 'medium' | 'high' | 'urgent';
-    status: 'pending' | 'in-progress' | 'resolved' | 'rejected';
-    requestedBy: string;
-    assignedTo?: string;
-    createdAt: string;
-    updatedAt: string;
-    resolvedAt?: string;
-    images?: string[];
-    comments?: MaintenanceComment[];
+    description?: string;
+    status: string;
+    priority: string;
+    created_at: string;
+}
+
+export interface MaintenanceResponse {
+    id: string;
+    room_id: string;
+    room_number: string;
+    title: string;
+    description?: string;
+    status: string;
+    priority: string;
+    created_at: string;
 }
 
 export interface MaintenanceComment {

@@ -56,23 +56,25 @@ pub struct UserResponse {
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Room {
     pub id: Uuid,
+    pub hostel_id: Uuid,
     pub room_number: String,
     pub floor: i32,
     pub capacity: i32,
-    pub occupied: i32,
-    pub room_type: String,
-    pub rent: i32,
-    pub status: String,
+    pub occupancy: i32,
+    pub room_type: String, // single, double, triple, dormitory
+    pub status: String,    // available, occupied, maintenance, reserved
+    pub price_per_month: f64,
     pub created_at: NaiveDateTime,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CreateRoomRequest {
+    pub hostel_id: Uuid,
     pub room_number: String,
     pub floor: i32,
     pub capacity: i32,
     pub room_type: String,
-    pub rent: i32,
+    pub price_per_month: f64,
 }
 
 // Fee Management Models
@@ -80,11 +82,11 @@ pub struct CreateRoomRequest {
 pub struct Fee {
     pub id: Uuid,
     pub student_id: Uuid,
-    pub amount: i32,
+    pub amount: f64,
     pub fee_type: String,
-    pub due_date: NaiveDateTime,
-    pub status: String,
-    pub paid_at: Option<NaiveDateTime>,
+    pub status: String, // paid, pending, overdue
+    pub due_date: NaiveDate,
+    pub payment_date: Option<NaiveDate>,
     pub created_at: NaiveDateTime,
 }
 
@@ -94,18 +96,18 @@ pub struct FeeResponse {
     pub student_id: Uuid,
     pub student_name: String,
     pub room_number: Option<String>,
-    pub amount: i32,
+    pub amount: f64,
     pub fee_type: String,
-    pub due_date: NaiveDateTime,
     pub status: String,
-    pub paid_at: Option<NaiveDateTime>,
+    pub due_date: NaiveDate,
+    pub payment_date: Option<NaiveDate>,
     pub created_at: NaiveDateTime,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CreateFeeRequest {
     pub student_id: Uuid,
-    pub amount: i32,
+    pub amount: f64,
     pub fee_type: String,
     pub due_date: String,
 }
@@ -175,7 +177,7 @@ pub struct HostelerDashboardData {
     pub recent_notices: Vec<Notice>,
 }
 
-// --- New Management Models ---
+// --- Management Models ---
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Hostel {
@@ -189,19 +191,6 @@ pub struct Hostel {
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Room {
-    pub id: Uuid,
-    pub hostel_id: Uuid,
-    pub room_number: String,
-    pub floor: i32,
-    pub capacity: i32,
-    pub occupancy: i32,
-    pub room_type: String, // single, double, triple, dormitory
-    pub status: String,    // available, occupied, maintenance, reserved
-    pub price_per_month: f64,
-}
-
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct RoomAllocation {
     pub id: Uuid,
     pub room_id: Uuid,
@@ -212,16 +201,6 @@ pub struct RoomAllocation {
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Fee {
-    pub id: Uuid,
-    pub student_id: Uuid,
-    pub amount: f64,
-    pub status: String, // paid, pending, overdue
-    pub due_date: NaiveDate,
-    pub payment_date: Option<NaiveDate>,
-}
-
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MaintenanceRequest {
     pub id: Uuid,
     pub room_id: Uuid,
@@ -229,6 +208,18 @@ pub struct MaintenanceRequest {
     pub description: Option<String>,
     pub status: String,   // pending, in-progress, completed
     pub priority: String, // low, medium, high
+    pub created_at: NaiveDateTime,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct MaintenanceResponse {
+    pub id: Uuid,
+    pub room_id: Uuid,
+    pub room_number: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: String,
+    pub priority: String,
     pub created_at: NaiveDateTime,
 }
 

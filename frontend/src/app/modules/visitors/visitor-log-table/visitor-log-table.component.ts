@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
@@ -10,6 +10,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SearchFilterComponent } from '../../../shared/components/search-filter/search-filter.component';
 import { Visitor } from '../../../core/models';
 import { VisitorService } from '../../../core/services';
@@ -20,7 +21,7 @@ import { VisitorService } from '../../../core/services';
   imports: [
     CommonModule, MatTableModule, MatPaginatorModule, MatSortModule, MatCardModule,
     MatButtonModule, MatIconModule, MatChipsModule, MatDialogModule, MatFormFieldModule,
-    MatSelectModule, SearchFilterComponent,
+    MatSelectModule, MatSnackBarModule, SearchFilterComponent,
   ],
   template: `
     <div class="visitor-log-page">
@@ -59,7 +60,7 @@ import { VisitorService } from '../../../core/services';
 
           <ng-container matColumnDef="checkInTime">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Check In</th>
-            <td mat-cell *matCellDef="let v">{{ v.checkInTime }}</td>
+            <td mat-cell *matCellDef="let v">{{ v.checkInTime | date:'shortTime' }}</td>
           </ng-container>
 
           <ng-container matColumnDef="status">
@@ -75,7 +76,7 @@ import { VisitorService } from '../../../core/services';
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let v">
               @if (v.status === 'checked-in') {
-                <button mat-stroked-button class="checkout-btn">Checkout</button>
+                <button mat-stroked-button class="checkout-btn" (click)="checkOut(v)">Checkout</button>
               }
             </td>
           </ng-container>
@@ -94,45 +95,6 @@ import { VisitorService } from '../../../core/services';
         <mat-paginator [pageSizeOptions]="[10, 25]" showFirstLastButtons></mat-paginator>
       </mat-card>
     </div>
-      <table mat-table [dataSource]="dataSource" matSort>
-        <ng-container matColumnDef="visitorName">
-          <th mat-header-cell *matHeaderCellDef mat-sort-header>Visitor</th>
-          <td mat-cell *matCellDef="let v"><strong>{{ v.visitorName }}</strong></td>
-        </ng-container>
-        <ng-container matColumnDef="visitorPhone">
-          <th mat-header-cell *matHeaderCellDef>Phone</th>
-          <td mat-cell *matCellDef="let v">{{ v.visitorPhone }}</td>
-        </ng-container>
-        <ng-container matColumnDef="visitingStudent">
-          <th mat-header-cell *matHeaderCellDef>Visiting</th>
-          <td mat-cell *matCellDef="let v">{{ v.visitingStudent }}</td>
-        </ng-container>
-        <ng-container matColumnDef="roomNumber">
-          <th mat-header-cell *matHeaderCellDef>Room</th>
-          <td mat-cell *matCellDef="let v">{{ v.roomNumber }}</td>
-        </ng-container>
-        <ng-container matColumnDef="checkInTime">
-          <th mat-header-cell *matHeaderCellDef>Check-in</th>
-          <td mat-cell *matCellDef="let v">{{ v.checkInTime | date:'shortTime' }}</td>
-        </ng-container>
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Status</th>
-          <td mat-cell *matCellDef="let v">
-            <span class="badge" [ngClass]="v.status | statusBadge">{{ v.status | titlecase }}</span>
-          </td>
-        </ng-container>
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef></th>
-          <td mat-cell *matCellDef="let v">
-            <button mat-flat-button class="checkout-btn" *ngIf="v.status === 'checked-in'" (click)="checkOut(v)">Check Out</button>
-            <span *ngIf="v.status === 'checked-out'" class="muted">{{ v.checkOutTime | date:'shortTime' }}</span>
-          </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-      </table>
-      <mat-paginator [pageSizeOptions]="[10, 25]" showFirstLastButtons></mat-paginator>
-    </mat-card>
   `,
   styles: [`
     .visitor-log-page { max-width: 1200px; padding: 0 16px; }
@@ -150,15 +112,15 @@ import { VisitorService } from '../../../core/services';
     .badge-out { background: rgba(148, 163, 184, 0.08); color: var(--text-muted); }
     .checkout-btn { font-size: 12px !important; height: 32px !important; line-height: 32px !important; padding: 0 12px !important; }
     .empty-state { text-align: center; padding: 70px 20px; color: var(--text-muted); mat-icon { font-size: 48px; width: 48px; height: 48px; opacity: 0.5; } p { font-size: 14px; margin-top: 8px; } }
+    @media (max-width: 768px) { .toolbar { flex-direction: column; } }
   `],
 })
-export class VisitorLogTableComponent implements OnInit {
+export class VisitorLogTableComponent implements OnInit, AfterViewInit {
   displayedColumns = ['visitorName', 'visitingStudent', 'roomNumber', 'checkInTime', 'status', 'actions'];
   dataSource = new MatTableDataSource<Visitor>([]);
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  ngOnInit(): void { this.dataSource.data = []; }
   constructor(
     private snackBar: MatSnackBar,
     private visitorService: VisitorService
@@ -172,10 +134,6 @@ export class VisitorLogTableComponent implements OnInit {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
   }
-
-
-  applySearch(v: string): void {
-    this.dataSource.filter = v.trim().toLowerCase();
 
   loadVisitors(): void {
     this.visitorService.getAll().subscribe({
@@ -191,7 +149,7 @@ export class VisitorLogTableComponent implements OnInit {
   }
 
   checkOut(visitor: Visitor): void {
-    const updated = { ...visitor, status: 'checked-out' as 'checked-out', checkOutTime: new Date().toISOString() };
+    const updated = { ...visitor, status: 'checked-out' as any, checkOutTime: new Date().toISOString() };
     this.visitorService.update(visitor.id, updated).subscribe({
       next: () => {
         this.snackBar.open(`${visitor.visitorName} checked out`, 'OK', { duration: 3000 });

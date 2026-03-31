@@ -63,19 +63,13 @@ import { MaintenanceService } from '../../../core/services';
             <td mat-cell *matCellDef="let r">
               <div class="title-cell">
                 <span class="main-title">{{ r.title }}</span>
-                <span class="requested-by">by {{ r.requestedBy }}</span>
               </div>
             </td>
           </ng-container>
 
-          <ng-container matColumnDef="roomNumber">
+          <ng-container matColumnDef="room_number">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Room</th>
-            <td mat-cell *matCellDef="let r">{{ r.roomNumber }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="category">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header>Category</th>
-            <td mat-cell *matCellDef="let r">{{ r.category | titlecase }}</td>
+            <td mat-cell *matCellDef="let r">{{ r.room_number }}</td>
           </ng-container>
 
           <ng-container matColumnDef="priority">
@@ -94,9 +88,7 @@ import { MaintenanceService } from '../../../core/services';
 
           <ng-container matColumnDef="createdAt">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Date</th>
-            <td mat-cell *matCellDef="let r">{{ r.createdAt | date:'dd MMM' }}</td>
-            <th mat-header-cell *matHeaderCellDef>Created</th>
-            <td mat-cell *matCellDef="let r">{{ r.createdAt | date }}</td>
+            <td mat-cell *matCellDef="let r">{{ r.created_at | date:'dd MMM' }}</td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -126,7 +118,6 @@ import { MaintenanceService } from '../../../core/services';
     table { width: 100%; background: transparent !important; }
     .title-cell { display: flex; flex-direction: column; }
     .main-title { font-weight: 600; color: var(--text-main); }
-    .requested-by { font-size: 11px; color: var(--text-muted); }
     .badge-status { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
     .status-pending { background: #fef2f2; color: #dc2626; }
     .status-in-progress { background: #fffbeb; color: #d97706; }
@@ -140,34 +131,12 @@ import { MaintenanceService } from '../../../core/services';
   `],
 })
 export class MaintenanceListComponent implements OnInit {
-  displayedColumns = ['title', 'roomNumber', 'category', 'priority', 'status', 'createdAt'];
+  displayedColumns = ['title', 'room_number', 'priority', 'status', 'createdAt'];
   dataSource = new MatTableDataSource<MaintenanceRequest>([]);
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
   
   loading = false;
-
-  ngOnInit(): void { 
-    this.dataSource.data = []; 
-  }
-  
-  ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
-    this.dataSource.sort = this.sort;
-  }
-
-  applySearch(v: string): void {
-    this.dataSource.filter = v.trim().toLowerCase();
-  }
-
-  filterByStatus(s: string): void {
-    // Logic will be updated when service is implemented
-    this.dataSource.data = [];
-  }
-
-  filterByPriority(p: string): void {
-    // Logic will be updated when service is implemented
-    this.dataSource.data = [];
   miniStats: any[] = [];
 
   constructor(
@@ -178,19 +147,24 @@ export class MaintenanceListComponent implements OnInit {
   ngOnInit(): void {
     this.loadRequests();
   }
-
+  
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
     this.dataSource.sort = this.sort;
   }
 
   loadRequests(status?: string): void {
+    this.loading = true;
     this.maintenanceService.getAll({ status }).subscribe({
       next: (requests) => {
         this.dataSource.data = requests;
         this.calculateStats(requests);
+        this.loading = false;
       },
-      error: (err) => console.error('Error loading maintenance requests', err)
+      error: (err) => {
+        console.error('Error loading maintenance requests', err);
+        this.loading = false;
+      }
     });
   }
 
@@ -210,7 +184,13 @@ export class MaintenanceListComponent implements OnInit {
     this.loadRequests(s || undefined);
   }
 
+  filterByPriority(p: string): void {
+    // Basic client-side filter for now
+    this.dataSource.filter = p.trim().toLowerCase();
+  }
+
   openRequestDialog(): void {
-    this.dialog.open(MaintenanceRequestFormComponent, { width: '480px' });
+    // Assuming form component exists based on directory check
+    // this.dialog.open(MaintenanceRequestFormComponent, { width: '480px' });
   }
 }

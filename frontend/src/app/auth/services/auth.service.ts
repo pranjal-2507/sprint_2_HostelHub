@@ -9,7 +9,7 @@ import { AuthResponse, LoginParams, RegisterParams, User } from '../models/auth.
     providedIn: 'root'
 })
 export class AuthService {
-    private apiUrl = 'http://localhost:8080/auth';
+    private apiUrl = '/auth';
 
     private currentUserSubject = new BehaviorSubject<User | null>(null);
     public currentUser$ = this.currentUserSubject.asObservable();
@@ -59,13 +59,13 @@ export class AuthService {
     }
 
     getHostelerDashboardData(): Observable<any> {
-        return this.http.get<any>(`http://localhost:8080/api/hosteler/dashboard`).pipe(
+        return this.http.get<any>(`/api/hosteler/dashboard`).pipe(
             catchError(this.handleError)
         );
     }
 
     getAdminDashboardData(): Observable<any> {
-        return this.http.get<any>(`http://localhost:8080/api/admin/dashboard/stats`).pipe(
+        return this.http.get<any>(`/api/admin/dashboard/stats`).pipe(
             catchError(this.handleError)
         );
     }
