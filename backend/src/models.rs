@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::{NaiveDateTime, NaiveDate};
+use chrono::{DateTime, Utc, NaiveDate};
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct User {
@@ -13,7 +13,7 @@ pub struct User {
     pub course: Option<String>,
     pub year: Option<i32>,
     pub room_number: Option<String>,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -56,15 +56,15 @@ pub struct UserResponse {
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Room {
     pub id: Uuid,
-    pub hostel_id: Uuid,
+    pub hostel_id: Option<Uuid>,
     pub room_number: String,
     pub floor: i32,
     pub capacity: i32,
-    pub occupied: i32,
-    pub room_type: String, // single, double, triple, dormitory
-    pub status: String,    // available, occupied, maintenance, reserved
+    pub occupancy: Option<i32>,
+    pub room_type: Option<String>, // single, double, triple, dormitory
+    pub status: Option<String>,    // available, occupied, maintenance, reserved
     pub price_per_month: f64,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,11 +83,11 @@ pub struct Fee {
     pub id: Uuid,
     pub student_id: Uuid,
     pub amount: f64,
-    pub fee_type: String,
-    pub status: String, // paid, pending, overdue
+    pub fee_type: Option<String>,
+    pub status: Option<String>, // paid, pending, overdue
     pub due_date: NaiveDate,
     pub payment_date: Option<NaiveDate>,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -97,11 +97,11 @@ pub struct FeeResponse {
     pub student_name: String,
     pub room_number: Option<String>,
     pub amount: f64,
-    pub fee_type: String,
-    pub status: String,
+    pub fee_type: Option<String>,
+    pub status: Option<String>,
     pub due_date: NaiveDate,
     pub payment_date: Option<NaiveDate>,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -119,10 +119,10 @@ pub struct Complaint {
     pub student_id: Uuid,
     pub title: String,
     pub description: String,
-    pub status: String,
-    pub priority: String,
-    pub resolved_at: Option<NaiveDateTime>,
-    pub created_at: NaiveDateTime,
+    pub status: Option<String>,
+    pub priority: Option<String>,
+    pub resolved_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -143,10 +143,10 @@ pub struct Notice {
     pub id: Uuid,
     pub title: String,
     pub content: String,
-    pub category: String,
-    pub priority: String,
-    pub created_by: Uuid,
-    pub created_at: NaiveDateTime,
+    pub category: Option<String>,
+    pub priority: Option<String>,
+    pub created_by: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -209,7 +209,7 @@ pub struct MaintenanceRequest {
     pub description: Option<String>,
     pub status: String,   // pending, in-progress, completed
     pub priority: String, // low, medium, high
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -221,7 +221,7 @@ pub struct MaintenanceResponse {
     pub description: Option<String>,
     pub status: String,
     pub priority: String,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -231,6 +231,6 @@ pub struct Visitor {
     pub name: String,
     pub relationship: Option<String>,
     pub purpose: Option<String>,
-    pub entry_time: NaiveDateTime,
-    pub exit_time: Option<NaiveDateTime>,
+    pub entry_time: DateTime<Utc>,
+    pub exit_time: Option<DateTime<Utc>>,
 }

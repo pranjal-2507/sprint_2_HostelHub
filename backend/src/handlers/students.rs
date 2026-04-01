@@ -38,7 +38,7 @@ pub async fn assign_room(
 ) -> Result<Json<&'static str>, (StatusCode, String)> {
     // Check if room exists and has capacity
     let room: Option<crate::models::Room> = sqlx::query_as(
-        "SELECT id, room_number, floor, capacity, occupied, room_type, rent, status, created_at FROM rooms WHERE room_number = $1"
+        "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month::FLOAT8, status, created_at FROM rooms WHERE room_number = $1"
     )
     .bind(&room_number)
     .fetch_optional(&state.db)
@@ -47,7 +47,7 @@ pub async fn assign_room(
 
     let room = room.ok_or((StatusCode::NOT_FOUND, "Room not found".to_string()))?;
     
-    if room.occupied >= room.capacity {
+    if room.occupancy.unwrap_or(0) >= room.capacity {
         return Err((StatusCode::BAD_REQUEST, "Room is at full capacity".to_string()));
     }
 
@@ -64,7 +64,7 @@ pub async fn assign_room(
     }
 
     // Update room occupancy
-    sqlx::query("UPDATE rooms SET occupied = occupied + 1 WHERE room_number = $1")
+    sqlx::query("UPDATE rooms SET occupancy = occupancy + 1 WHERE room_number = $1")
         .bind(&room_number)
         .execute(&state.db)
         .await
@@ -91,7 +91,7 @@ pub async fn remove_student(
 
     // Update room occupancy if student had a room
     if let Some(room_number) = &student.room_number {
-        sqlx::query("UPDATE rooms SET occupied = occupied - 1 WHERE room_number = $1")
+        sqlx::query("UPDATE rooms SET occupancy = occupancy - 1 WHERE room_number = $1")
             .bind(room_number)
             .execute(&state.db)
             .await

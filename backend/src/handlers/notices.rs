@@ -15,7 +15,10 @@ pub async fn get_all_notices(
     )
     .fetch_all(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| {
+        eprintln!("Error fetching notices: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e))
+    })?;
 
     Ok(Json(notices))
 }
@@ -52,7 +55,10 @@ pub async fn create_notice(
             .bind(notice_id)
             .fetch_one(&state.db)
             .await
-            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch created notice".to_string()))?;
+            .map_err(|e| {
+                eprintln!("Failed to fetch created notice: {}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch created notice".to_string())
+            })?;
             
             Ok(Json(notice))
         },

@@ -11,11 +11,14 @@ pub async fn get_all_rooms(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Room>>, (StatusCode, String)> {
     let rooms: Vec<Room> = sqlx::query_as(
-        "SELECT id, room_number, floor, capacity, occupied, room_type, rent, status, created_at FROM rooms ORDER BY room_number"
+        "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month::FLOAT8, status, created_at FROM rooms ORDER BY room_number"
     )
     .fetch_all(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| {
+        eprintln!("Error fetching rooms: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e))
+    })?;
 
     Ok(Json(rooms))
 }
@@ -29,28 +32,32 @@ pub async fn create_room(
     
     let result = sqlx::query(
         r#"
-        INSERT INTO rooms (id, room_number, floor, capacity, room_type, rent, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        INSERT INTO rooms (id, hostel_id, room_number, floor, capacity, room_type, price_per_month, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
         "#
     )
     .bind(room_id)
+    .bind(payload.hostel_id)
     .bind(&payload.room_number)
     .bind(payload.floor)
     .bind(payload.capacity)
     .bind(&payload.room_type)
-    .bind(payload.rent)
+    .bind(payload.price_per_month)
     .execute(&state.db)
     .await;
     
     match result {
         Ok(_) => {
             let room: Room = sqlx::query_as(
-                "SELECT id, room_number, floor, capacity, occupied, room_type, rent, status, created_at FROM rooms WHERE id = $1"
+                "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month::FLOAT8, status, created_at FROM rooms WHERE id = $1"
             )
             .bind(room_id)
             .fetch_one(&state.db)
             .await
-            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch created room".to_string()))?;
+            .map_err(|e| {
+                eprintln!("Failed to fetch created room: {}", e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch created room".to_string())
+            })?;
             
             Ok(Json(room))
         },

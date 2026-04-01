@@ -77,8 +77,11 @@ pub async fn login(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
     
+    println!("Attempting login for email: {}", payload.email);
     if let Some(user) = record {
+        println!("User found, checking password...");
         if verify_password(&payload.password, &user.password_hash) {
+            println!("Password verified successfully");
             let token = generate_jwt(&user.id.to_string());
             Ok(Json(AuthResponse {
                 access_token: token,

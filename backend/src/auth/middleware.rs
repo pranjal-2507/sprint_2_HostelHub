@@ -35,12 +35,16 @@ where
                     token,
                     &DecodingKey::from_secret(secret.as_bytes()),
                     &validation
-                ).map_err(|_| (StatusCode::UNAUTHORIZED, "Invalid or expired token".to_string()))?;
+                ).map_err(|e| {
+                    eprintln!("JWT Decode Error: {:?}", e);
+                    (StatusCode::UNAUTHORIZED, "Invalid or expired token".to_string())
+                })?;
                 
                 return Ok(RequireAuth(token_data.claims.sub));
             }
         }
         
+        eprintln!("Auth Error: Missing or malformed Authorization header");
         Err((StatusCode::UNAUTHORIZED, "Missing or malformed Authorization header".to_string()))
     }
 }
@@ -59,15 +63,21 @@ impl FromRequestParts<Arc<AppState>> for RequireAdmin {
             .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID in token".to_string()))?;
         
         // Query database for role
+        println!("Checking admin role for user: {}", user_id);
         let role: String = sqlx::query_scalar("SELECT role FROM users WHERE id = $1")
             .bind(uuid)
             .fetch_one(&state.db)
             .await
-            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to verify permissions".to_string()))?;
+            .map_err(|e| {
+                eprintln!("Role Query Error for user {}: {:?}", user_id, e);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Failed to verify permissions".to_string())
+            })?;
             
         if role == "admin" {
+            println!("Admin access granted for user: {}", user_id);
             Ok(RequireAdmin(user_id))
         } else {
+            eprintln!("Admin access denied for user: {} (Role: {})", user_id, role);
             Err((StatusCode::FORBIDDEN, "Admin permission required".to_string()))
         }
     }
