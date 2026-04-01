@@ -83,6 +83,7 @@ impl FromRequestParts<Arc<AppState>> for RequireAdmin {
     }
 }
 
+#[allow(dead_code)]
 pub struct RequireHosteler(pub String);
 
 #[async_trait]

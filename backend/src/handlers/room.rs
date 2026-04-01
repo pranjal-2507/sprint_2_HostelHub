@@ -5,6 +5,7 @@ use axum::{
 };
 use std::sync::Arc;
 use uuid::Uuid;
+use sqlx::Postgres;
 
 use crate::auth::middleware::RequireAdmin;
 use crate::db::AppState;
@@ -14,7 +15,11 @@ pub async fn get_all_rooms(
     _admin: RequireAdmin,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Room>>, (StatusCode, String)> {
+
     let rooms = sqlx::query_as::<_, Room>("SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8, created_at FROM rooms ORDER BY room_number")
+
+    let rooms = sqlx::query_as::<Postgres, Room>("SELECT * FROM rooms ORDER BY room_number")
+
         .fetch_all(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -25,7 +30,11 @@ pub async fn get_all_rooms(
 pub async fn get_rooms(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Room>>, (StatusCode, String)> {
+
     let rooms = sqlx::query_as::<_, Room>("SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8, created_at FROM rooms WHERE status = 'available' ORDER BY room_number")
+
+    let rooms = sqlx::query_as::<Postgres, Room>("SELECT * FROM rooms WHERE status = 'available' ORDER BY room_number")
+
         .fetch_all(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -33,11 +42,16 @@ pub async fn get_rooms(
     Ok(Json(rooms))
 }
 
+#[allow(dead_code)]
 pub async fn get_room_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Room>, (StatusCode, String)> {
+
     let room = sqlx::query_as::<_, Room>("SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8, created_at FROM rooms WHERE id = $1")
+
+    let room = sqlx::query_as::<Postgres, Room>("SELECT * FROM rooms WHERE id = $1")
+
         .bind(id)
         .fetch_one(&state.db)
         .await
@@ -52,7 +66,7 @@ pub async fn create_room(
     Json(payload): Json<CreateRoomRequest>,
 ) -> Result<(StatusCode, Json<Room>), (StatusCode, String)> {
     let room_id = Uuid::new_v4();
-    let room = sqlx::query_as::<_, Room>(
+    let room = sqlx::query_as::<Postgres, Room>(
         "INSERT INTO rooms (id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month, created_at) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING *"
     )

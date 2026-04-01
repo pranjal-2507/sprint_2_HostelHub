@@ -5,6 +5,7 @@ use axum::{
 };
 use std::sync::Arc;
 use uuid::Uuid;
+use sqlx::Postgres;
 
 use crate::db::AppState;
 use crate::models::Fee;
@@ -12,7 +13,7 @@ use crate::models::Fee;
 pub async fn get_fees(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Fee>>, StatusCode> {
-    let fees = sqlx::query_as::<_, Fee>("SELECT * FROM fees")
+    let fees = sqlx::query_as::<Postgres, Fee>("SELECT * FROM fees")
         .fetch_all(&state.db)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -24,7 +25,7 @@ pub async fn create_fee(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<Fee>,
 ) -> Result<(StatusCode, Json<Fee>), StatusCode> {
-    let fee = sqlx::query_as::<_, Fee>(
+    let fee = sqlx::query_as::<Postgres, Fee>(
         "INSERT INTO fees (id, student_id, amount, status, due_date, payment_date) 
          VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"
     )

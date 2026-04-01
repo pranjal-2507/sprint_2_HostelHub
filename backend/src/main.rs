@@ -222,7 +222,12 @@ async fn main() {
     // Setup routes
     let app = routes::create_router(state).layer(cors);
 
+    // Get port from environment or default to 8080
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+    
     // Bind server listener
+
     let addr = "0.0.0.0:8080";
     let listener = match tokio::net::TcpListener::bind(addr).await {
         Ok(l) => l,
@@ -233,6 +238,12 @@ async fn main() {
             std::process::exit(1);
         }
     };
+
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap_or_else(|e| {
+        panic!("Failed to bind to {} (Error: {}). Tip: Use 'Stop-Process -Id (Get-NetTCPConnection -LocalPort {}).OwningProcess -Force' on Windows to clear the port.", addr, e, port);
+    });
+
+
     println!("✓ Backend server listening on {}", addr);
 
     if let Err(e) = axum::serve(listener, app).await {
