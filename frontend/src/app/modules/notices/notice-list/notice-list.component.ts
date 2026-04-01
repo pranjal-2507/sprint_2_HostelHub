@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -116,6 +116,7 @@ export class NoticeListComponent implements OnInit {
   private noticeService = inject(NoticeService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
 
   allNotices: any[] = [];
   filteredNotices: any[] = [];
@@ -132,10 +133,12 @@ export class NoticeListComponent implements OnInit {
         this.allNotices = data;
         this.applySearch(this.searchTerm);
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error fetching notices', err);
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }

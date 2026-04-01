@@ -15,7 +15,7 @@ pub async fn get_all_fees(
         r#"
         SELECT 
             f.id, f.student_id, u.name as student_name, u.room_number,
-            f.amount, f.fee_type, f.due_date, f.status, f.payment_date, f.created_at 
+            f.amount::FLOAT8, f.fee_type, f.due_date, f.status, f.payment_date, f.created_at 
         FROM fees f
         JOIN users u ON f.student_id = u.id
         ORDER BY f.created_at DESC
@@ -59,7 +59,7 @@ pub async fn create_fee(
     match result {
         Ok(_) => {
             let fee: Fee = sqlx::query_as(
-                "SELECT id, student_id, amount, fee_type, due_date, status, payment_date, created_at FROM fees WHERE id = $1"
+                "SELECT id, student_id, amount::FLOAT8, fee_type, due_date, status, payment_date, created_at FROM fees WHERE id = $1"
             )
             .bind(fee_id)
             .fetch_one(&state.db)
@@ -108,7 +108,7 @@ pub async fn get_my_fees(
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()))?;
 
     let fees: Vec<Fee> = sqlx::query_as(
-        "SELECT id, student_id, amount, fee_type, due_date, status, payment_date, created_at FROM fees WHERE student_id = $1 ORDER BY created_at DESC"
+        "SELECT id, student_id, amount::FLOAT8, fee_type, due_date, status, payment_date, created_at FROM fees WHERE student_id = $1 ORDER BY created_at DESC"
     )
     .bind(uuid)
     .fetch_all(&state.db)
@@ -124,7 +124,7 @@ pub async fn get_student_fees(
     Path(student_id): Path<Uuid>,
 ) -> Result<Json<Vec<Fee>>, (StatusCode, String)> {
     let fees: Vec<Fee> = sqlx::query_as(
-        "SELECT id, student_id, amount, fee_type, due_date, status, payment_date, created_at FROM fees WHERE student_id = $1 ORDER BY created_at DESC"
+        "SELECT id, student_id, amount::FLOAT8, fee_type, due_date, status, payment_date, created_at FROM fees WHERE student_id = $1 ORDER BY created_at DESC"
     )
     .bind(student_id)
     .fetch_all(&state.db)

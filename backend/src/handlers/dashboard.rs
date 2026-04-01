@@ -10,40 +10,59 @@ pub async fn get_admin_dashboard_stats(
     RequireAdmin(_user_id): RequireAdmin,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<DashboardStats>, (StatusCode, String)> {
+    println!("Fetching admin dashboard stats...");
+    
     let total_students: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM users WHERE role = 'hosteler'"
     )
     .fetch_one(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| {
+        eprintln!("Error counting students: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
 
     let total_rooms: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM rooms"
     )
     .fetch_one(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| {
+        eprintln!("Error counting rooms: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
 
     let occupied_rooms: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM rooms WHERE occupied > 0"
+        "SELECT COUNT(*) FROM rooms WHERE occupancy > 0"
     )
     .fetch_one(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| {
+        eprintln!("Error counting occupied rooms: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
 
     let pending_payments: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM fees WHERE status = 'pending'"
     )
     .fetch_one(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| {
+        eprintln!("Error counting pending payments: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
 
     let active_complaints: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM complaints WHERE status != 'resolved'"
     )
     .fetch_one(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| {
+        eprintln!("Error counting active complaints: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
+
+    println!("Dashboard stats fetched successfully: Students={}, Rooms={}, Occupied={}", total_students.0, total_rooms.0, occupied_rooms.0);
 
     let stats = DashboardStats {
         total_students: total_students.0,
@@ -76,24 +95,30 @@ pub async fn get_hosteler_dashboard(
     // Get room info if assigned
     let room_info: Option<Room> = if let Some(room_num) = &user.room_number {
         sqlx::query_as(
-            "SELECT id, room_number, floor, capacity, occupied, room_type, rent, status, created_at FROM rooms WHERE room_number = $1"
+            "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month::FLOAT8, status, created_at FROM rooms WHERE room_number = $1"
         )
         .bind(room_num)
         .fetch_optional(&state.db)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?
+        .map_err(|e| {
+            eprintln!("Error fetching room info: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+        })?
     } else {
         None
     };
 
     // Get fee status
     let fee_status: Vec<Fee> = sqlx::query_as(
-        "SELECT id, student_id, amount, fee_type, due_date, status, paid_at, created_at FROM fees WHERE student_id = $1 ORDER BY created_at DESC LIMIT 5"
+        "SELECT id, student_id, amount::FLOAT8, fee_type, due_date, status, payment_date, created_at FROM fees WHERE student_id = $1 ORDER BY created_at DESC LIMIT 5"
     )
     .bind(uuid)
     .fetch_all(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| {
+        eprintln!("Error fetching fee status: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
 
     // Get recent complaints
     let recent_complaints: Vec<Complaint> = sqlx::query_as(
@@ -149,7 +174,7 @@ pub async fn get_hosteler_room_info(
 
     if let Some(room_num) = &user.room_number {
         let room: Room = sqlx::query_as(
-            "SELECT id, room_number, floor, capacity, occupied, room_type, rent, status, created_at FROM rooms WHERE room_number = $1"
+            "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month::FLOAT8, status, created_at FROM rooms WHERE room_number = $1"
         )
         .bind(room_num)
         .fetch_one(&state.db)

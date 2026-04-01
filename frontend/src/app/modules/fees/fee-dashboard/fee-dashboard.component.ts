@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, inject, AfterViewInit } from '@angular/core';
+import { Component, OnInit, ViewChild, inject, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -158,6 +158,7 @@ export class FeeDashboardComponent implements OnInit, AfterViewInit {
   loading = true;
   private feeService = inject(FeeService);
   private snackBar = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
 
   allFees: FeeResponse[] = [];
   overdueCount = 0;
@@ -184,10 +185,12 @@ export class FeeDashboardComponent implements OnInit, AfterViewInit {
         this.dataSource.data = data;
         this.calculateStats();
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error fetching fees', err);
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }

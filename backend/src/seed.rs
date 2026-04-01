@@ -28,6 +28,40 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), sqlx::Error> {
     
     println!("✓ Ensured admin user: {}", admin_email);
 
+    // Also fix admin@hostelhub.com (seeded by supabase_seed.sql with bcrypt hash)
+    // Update its password_hash to Argon2 format so login works
+    let update_result = sqlx::query(
+        "UPDATE users SET password_hash = $1 WHERE email = 'admin@hostelhub.com'"
+    )
+    .bind(&admin_password)
+    .execute(pool)
+    .await;
+
+    match update_result {
+        Ok(res) if res.rows_affected() > 0 => println!("✓ Updated password for admin@hostelhub.com to Argon2"),
+        Ok(_) => println!("! admin@hostelhub.com not found for password update"),
+        Err(e) => eprintln!("! Error updating admin password: {}", e),
+    }
+
+    // Also ensure admin@gmail.com exists and has the correct password
+    let _gmail_admin = sqlx::query(
+        r#"
+        INSERT INTO users (id, name, email, password_hash, role, created_at)
+        VALUES ($1, $2, $3, $4, $5, NOW())
+        ON CONFLICT (email) DO UPDATE SET 
+            password_hash = EXCLUDED.password_hash,
+            role = EXCLUDED.role
+        "#
+    )
+    .bind(Uuid::new_v4())
+    .bind("Admin User")
+    .bind("admin@gmail.com")
+    .bind(&admin_password)
+    .bind("admin")
+    .execute(pool)
+    .await?;
+    println!("✓ Ensured admin user: admin@gmail.com");
+
     // Create sample hosteler
     let hosteler_id = Uuid::new_v4();
     let hosteler_password = hash_password("student123");
@@ -64,18 +98,19 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), sqlx::Error> {
         
         let room_result = sqlx::query(
             r#"
-            INSERT INTO rooms (id, room_number, floor, capacity, occupied, room_type, rent, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            INSERT INTO rooms (id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
             ON CONFLICT (room_number) DO NOTHING
             "#
         )
         .bind(room_id)
+        .bind(Uuid::new_v4()) // Placeholder hostel_id
         .bind(room_number)
         .bind(2)
         .bind(2)
         .bind(occupied)
         .bind("Double Sharing")
-        .bind(8000)
+        .bind(8000.0) // Bind as float for DECIMAL
         .execute(pool)
         .await?;
 
@@ -101,6 +136,7 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), sqlx::Error> {
     if let Some((actual_hosteler_id,)) = hosteler_user {
         // Create sample fee
         let fee_id = Uuid::new_v4();
+        let due_date = chrono::Utc::now() + chrono::Duration::days(30);
         let fee_result = sqlx::query(
             r#"
             INSERT INTO fees (id, student_id, amount, fee_type, due_date, status, created_at)
@@ -109,9 +145,9 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), sqlx::Error> {
         )
         .bind(fee_id)
         .bind(actual_hosteler_id)
-        .bind(8000)
+        .bind(8000.0) // Bind as float for DECIMAL
         .bind("Monthly Rent")
-        .bind("2026-04-01 00:00:00")
+        .bind(due_date.naive_utc()) // Bind as NaiveDateTime
         .bind("pending")
         .execute(pool)
         .await;

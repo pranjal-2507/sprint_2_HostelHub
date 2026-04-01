@@ -30,7 +30,7 @@ async fn main() {
     println!("Connecting to database...");
     
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(20) // Increased for stability
         .acquire_timeout(std::time::Duration::from_secs(30))
         .connect_with(
             database_url.parse::<sqlx::postgres::PgConnectOptions>()
@@ -40,7 +40,7 @@ async fn main() {
         .await
         .expect("Failed to connect to Postgres");
 
-    println!("✓ Database connected successfully");
+    println!("✓ Database connected successfully (Pool size: 20)");
 
     // Construct app state
     let state = Arc::new(AppState { db: pool });
@@ -76,18 +76,24 @@ async fn main() {
             Err(e) => println!("Warning: Could not add column {}: {}", col, e),
         }
     }
+    // Ensure unique constraint on email (needed for ON CONFLICT)
+    let _ = sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users (email)"
+    ).execute(&state.db).await;
+    println!("✓ Users email unique constraint ready");
 
     // Rooms table
     let _ = sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS rooms (
             id UUID PRIMARY KEY,
+            hostel_id UUID,
             room_number VARCHAR UNIQUE NOT NULL,
             floor INTEGER NOT NULL,
             capacity INTEGER NOT NULL,
-            occupied INTEGER DEFAULT 0,
+            occupancy INTEGER DEFAULT 0,
             room_type VARCHAR NOT NULL,
-            rent INTEGER NOT NULL,
+            price_per_month DECIMAL(10,2) NOT NULL,
             status VARCHAR DEFAULT 'available',
             created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )
@@ -97,18 +103,21 @@ async fn main() {
     .await;
     // Ensure missing room columns exist
     for col in &[
+        "hostel_id UUID",
         "floor INTEGER NOT NULL DEFAULT 1",
         "capacity INTEGER NOT NULL DEFAULT 1",
-        "occupied INTEGER DEFAULT 0",
+        "occupancy INTEGER DEFAULT 0",
         "room_type VARCHAR NOT NULL DEFAULT 'standard'",
-        "rent INTEGER NOT NULL DEFAULT 0",
+        "price_per_month DECIMAL(10,2) NOT NULL DEFAULT 0",
         "status VARCHAR DEFAULT 'available'",
     ] {
-        let parts: Vec<&str> = col.split_whitespace().collect();
-        let _col_name = parts[0];
         let sql = format!("ALTER TABLE rooms ADD COLUMN IF NOT EXISTS {}", col);
         let _ = sqlx::query(&sql).execute(&state.db).await;
     }
+    // Ensure unique constraint on room_number (needed for ON CONFLICT)
+    let _ = sqlx::query(
+        "CREATE UNIQUE INDEX IF NOT EXISTS rooms_room_number_unique ON rooms (room_number)"
+    ).execute(&state.db).await;
     println!("✓ Rooms table ready");
 
     // Fees table
@@ -121,7 +130,7 @@ async fn main() {
             fee_type VARCHAR NOT NULL,
             due_date TIMESTAMP NOT NULL,
             status VARCHAR DEFAULT 'pending',
-            paid_at TIMESTAMP,
+            payment_date TIMESTAMP,
             created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )
         "#,
@@ -130,14 +139,12 @@ async fn main() {
     .await;
     // Ensure missing fee columns exist
     for col in &[
-        "amount INTEGER NOT NULL DEFAULT 0",
+        "amount DECIMAL(10,2) NOT NULL DEFAULT 0", // Use DECIMAL to match Supabase
         "fee_type VARCHAR NOT NULL DEFAULT 'room'",
         "due_date TIMESTAMP NOT NULL DEFAULT NOW()",
         "status VARCHAR DEFAULT 'pending'",
-        "paid_at TIMESTAMP",
+        "payment_date TIMESTAMP",
     ] {
-        let parts: Vec<&str> = col.split_whitespace().collect();
-        let _col_name = parts[0];
         let sql = format!("ALTER TABLE fees ADD COLUMN IF NOT EXISTS {}", col);
         let _ = sqlx::query(&sql).execute(&state.db).await;
     }
@@ -182,6 +189,7 @@ async fn main() {
             id UUID PRIMARY KEY,
             title VARCHAR NOT NULL,
             content TEXT NOT NULL,
+            category VARCHAR NOT NULL DEFAULT 'General',
             priority VARCHAR DEFAULT 'normal',
             created_by UUID NOT NULL REFERENCES users(id),
             created_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -194,11 +202,12 @@ async fn main() {
     for col in &[
         "title VARCHAR NOT NULL DEFAULT 'Announcement'",
         "content TEXT NOT NULL DEFAULT ''",
+        "category VARCHAR NOT NULL DEFAULT 'General'",
         "priority VARCHAR DEFAULT 'normal'",
         "created_by UUID",
     ] {
         let parts: Vec<&str> = col.split_whitespace().collect();
-        let col_name = parts[0];
+        let _col_name = parts[0];
         let sql = format!("ALTER TABLE notices ADD COLUMN IF NOT EXISTS {}", col);
         let _ = sqlx::query(&sql).execute(&state.db).await;
     }
@@ -214,8 +223,19 @@ async fn main() {
     let app = routes::create_router(state).layer(cors);
 
     // Bind server listener
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
-    println!("Backend server listening on 0.0.0.0:8080");
+    let addr = "0.0.0.0:8080";
+    let listener = match tokio::net::TcpListener::bind(addr).await {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("CRITICAL ERROR: Could not bind to {} - {}", addr, e);
+            eprintln!("Help: Check if another instance of the backend is already running.");
+            eprintln!("Try killing existing processes: taskkill /F /IM hostelhub_backend.exe /T");
+            std::process::exit(1);
+        }
+    };
+    println!("✓ Backend server listening on {}", addr);
 
-    axum::serve(listener, app).await.unwrap();
+    if let Err(e) = axum::serve(listener, app).await {
+        eprintln!("Server error: {}", e);
+    }
 }

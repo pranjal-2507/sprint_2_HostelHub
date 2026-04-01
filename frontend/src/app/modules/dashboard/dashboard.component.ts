@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -30,6 +30,7 @@ interface DashboardStats {
 
       @if (loading) {
         <div class="loading-state">
+          <mat-icon class="loading-icon">sync</mat-icon>
           <p>Loading dashboard data...</p>
         </div>
       } @else {
@@ -90,7 +91,22 @@ interface DashboardStats {
     .page-header { margin-bottom: 8px; }
     .page-title { font-size: 24px; font-weight: 700; color: var(--text-main); margin: 0; }
     .page-subtitle { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
-    .loading-state { text-align: center; padding: 40px; color: var(--text-muted); }
+    .loading-state { 
+      text-align: center; 
+      padding: 60px 40px; 
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .loading-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      animation: spin 2s linear infinite;
+    }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
     .stat-card { padding: 24px; border-radius: 16px !important; display: flex; align-items: center; gap: 16px; transition: transform 0.2s ease; background: var(--card-bg) !important; border: 1px solid var(--border-color); }
     .stat-card:hover { transform: translateY(-4px); }
@@ -113,6 +129,7 @@ interface DashboardStats {
 })
 export class DashboardComponent implements OnInit {
   private authService = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
   loading = true;
   statCards = [
     { title: 'Total Students', value: 0, icon: 'school', color: '#4f46e5', bg: '#eef2ff', key: 'total_students' },
@@ -131,15 +148,18 @@ export class DashboardComponent implements OnInit {
     this.loading = true;
     this.authService.getAdminDashboardData().subscribe({
       next: (stats: DashboardStats) => {
+        console.log('Dashboard data received:', stats);
         this.statCards = this.statCards.map(card => ({
           ...card,
           value: (stats as any)[card.key] || 0
         }));
         this.loading = false;
+        this.cdr.detectChanges(); // Force UI update
       },
       error: (err: any) => {
         console.error('Error fetching dashboard data', err);
         this.loading = false;
+        this.cdr.detectChanges(); // Force UI update even on error
       }
     });
   }

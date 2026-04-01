@@ -20,8 +20,10 @@ pub fn hash_password(password: &str) -> String {
 }
 
 pub fn verify_password(password: &str, hash: &str) -> bool {
-    let parsed_hash = PasswordHash::new(hash).unwrap();
-    Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok()
+    match PasswordHash::new(hash) {
+        Ok(parsed_hash) => Argon2::default().verify_password(password.as_bytes(), &parsed_hash).is_ok(),
+        Err(_) => false, // hash is not in Argon2 format (e.g. old bcrypt from seed SQL)
+    }
 }
 
 pub fn generate_jwt(user_id: &str) -> String {

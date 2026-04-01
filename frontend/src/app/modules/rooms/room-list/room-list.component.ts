@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
@@ -135,7 +135,8 @@ export class RoomListComponent implements OnInit, AfterViewInit {
   constructor(
     private roomService: RoomService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
@@ -154,10 +155,12 @@ export class RoomListComponent implements OnInit, AfterViewInit {
         this.allRooms = data;
         this.dataSource.data = data;
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error fetching rooms', err);
         this.loading = false;
+        this.cdr.detectChanges();
         this.snackBar.open('Failed to load rooms', 'Close', { duration: 3000 });
       }
     });
