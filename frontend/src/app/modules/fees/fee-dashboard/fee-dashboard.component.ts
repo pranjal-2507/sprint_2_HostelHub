@@ -216,7 +216,11 @@ export class FeeDashboardComponent implements OnInit, AfterViewInit {
   }
 
   filterByStatus(s: string): void {
-    this.dataSource.data = s ? this.allFees.filter(f => f.status === s) : this.allFees;
+    this.dataSource.data = s ? this.allFees.filter(f => f.status.toLowerCase() === s.toLowerCase()) : this.allFees;
+    if (this.paginator) {
+      this.paginator.firstPage();
+    }
+    this.cdr.detectChanges();
   }
 
   updateStatus(fee: FeeResponse, newStatus: string): void {

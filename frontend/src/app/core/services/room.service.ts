@@ -10,7 +10,12 @@ export class RoomService {
     constructor(private http: HttpClient) { }
 
     getAll(params?: { hostelId?: string; status?: string; type?: string }): Observable<Room[]> {
-        return this.http.get<Room[]>('/api/admin/rooms');
+        let httpParams = new HttpParams();
+        if (params?.status) httpParams = httpParams.set('status', params.status);
+        if (params?.type) httpParams = httpParams.set('type', params.type);
+        if (params?.hostelId) httpParams = httpParams.set('hostel_id', params.hostelId);
+        
+        return this.http.get<Room[]>('/api/admin/rooms', { params: httpParams });
     }
 
     getById(id: string): Observable<Room> {

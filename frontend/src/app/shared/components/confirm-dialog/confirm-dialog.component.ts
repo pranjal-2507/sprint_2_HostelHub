@@ -16,21 +16,35 @@ export interface ConfirmDialogData {
     standalone: true,
     imports: [CommonModule, MatDialogModule, MatButtonModule],
     template: `
-    <h2 mat-dialog-title>{{ data.title }}</h2>
-    <mat-dialog-content>
-      <p>{{ data.message }}</p>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()">{{ data.cancelText || 'Cancel' }}</button>
-      <button mat-flat-button [color]="data.color || 'primary'" (click)="onConfirm()">
-        {{ data.confirmText || 'Confirm' }}
-      </button>
-    </mat-dialog-actions>
+    <div class="confirm-container">
+      <h2 mat-dialog-title>{{ data.title }}</h2>
+      <mat-dialog-content>
+        <p class="message">{{ data.message }}</p>
+      </mat-dialog-content>
+      <mat-dialog-actions align="end">
+        <button mat-button class="cancel-btn" (click)="onCancel()">{{ data.cancelText || 'Cancel' }}</button>
+        <button mat-flat-button class="confirm-btn" [color]="data.color || 'primary'" (click)="onConfirm()">
+          {{ data.confirmText || 'Confirm' }}
+        </button>
+      </mat-dialog-actions>
+    </div>
   `,
     styles: [`
-    h2 { margin: 0; font-weight: 600; }
-    p { color: rgba(255, 255, 255, 0.7); line-height: 1.6; }
-    mat-dialog-actions { padding: 16px 0 0; }
+    .confirm-container {
+      padding: 12px 6px; border-radius: 16px;
+      background: var(--card-bg);
+    }
+    h2 { 
+      margin: 0; font-size: 20px; font-weight: 700; 
+      color: var(--text-main); letter-spacing: -0.5px;
+    }
+    .message { 
+      color: var(--text-muted); line-height: 1.6; 
+      font-size: 14px; margin-top: 12px;
+    }
+    mat-dialog-actions { padding: 24px 0 0; gap: 8px; }
+    .cancel-btn { color: var(--text-muted) !important; font-weight: 500; }
+    .confirm-btn { border-radius: 8px !important; font-weight: 600; padding: 0 20px !important; }
   `],
 })
 export class ConfirmDialogComponent {
