@@ -40,11 +40,20 @@ import { Complaint } from '../../../core/models';
             <app-search-filter placeholder="Search complaints..." (searchChange)="applySearch($event)"></app-search-filter>
             <mat-form-field appearance="outline" class="filter-field">
               <mat-label>Status</mat-label>
-              <mat-select (selectionChange)="filterByStatus($event.value)">
-                <mat-option value="">All</mat-option>
+              <mat-select [(value)]="selectedStatus" (selectionChange)="applyFilters()">
+                <mat-option value="">All Status</mat-option>
                 <mat-option value="pending">Pending</mat-option>
                 <mat-option value="in-progress">In Progress</mat-option>
                 <mat-option value="resolved">Resolved</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>Priority</mat-label>
+              <mat-select [(value)]="selectedPriority" (selectionChange)="applyFilters()">
+                <mat-option value="">All Priorities</mat-option>
+                <mat-option value="low">Low</mat-option>
+                <mat-option value="medium">Medium</mat-option>
+                <mat-option value="high">High</mat-option>
               </mat-select>
             </mat-form-field>
           </div>
@@ -134,6 +143,9 @@ export class ComplaintListComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   allComplaints: any[] = [];
+  selectedStatus = '';
+  selectedPriority = '';
+  searchTerm = '';
 
   ngOnInit(): void {
     this.fetchComplaints();
@@ -159,11 +171,33 @@ export class ComplaintListComponent implements OnInit {
   }
 
   applySearch(v: string): void {
-    this.dataSource.filter = v.trim().toLowerCase();
+    this.searchTerm = v.trim().toLowerCase();
+    this.applyFilters();
   }
 
-  filterByStatus(s: string): void {
-    this.dataSource.data = s ? this.allComplaints.filter(c => c.status === s) : this.allComplaints;
+  applyFilters(): void {
+    let filtered = [...this.allComplaints];
+
+    if (this.selectedStatus) {
+      filtered = filtered.filter(c => c.status.toLowerCase() === this.selectedStatus.toLowerCase());
+    }
+
+    if (this.selectedPriority) {
+      filtered = filtered.filter(c => c.priority.toLowerCase() === this.selectedPriority.toLowerCase());
+    }
+
+    if (this.searchTerm) {
+      filtered = filtered.filter(c => 
+        c.title.toLowerCase().includes(this.searchTerm) || 
+        (c.student_name && c.student_name.toLowerCase().includes(this.searchTerm))
+      );
+    }
+
+    this.dataSource.data = filtered;
+    if (this.paginator) {
+      this.paginator.firstPage();
+    }
+    this.cdr.detectChanges();
   }
 
   updateStatus(complaint: any, newStatus: string): void {

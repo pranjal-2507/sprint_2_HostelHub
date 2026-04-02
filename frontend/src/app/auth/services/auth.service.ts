@@ -58,6 +58,13 @@ export class AuthService {
         );
     }
 
+    updateProfile(params: Partial<User>): Observable<User> {
+        return this.http.put<User>(`/api/auth/profile`, params).pipe(
+            tap(user => this.setUser(user)),
+            catchError(this.handleError)
+        );
+    }
+
     getCurrentUser(): Observable<User> {
         return this.http.get<User>(`${this.apiUrl}/me`).pipe(
             tap(user => this.setUser(user)),

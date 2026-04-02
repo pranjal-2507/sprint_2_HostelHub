@@ -8,6 +8,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { StatusBadgePipe } from '../../shared/pipes/status-badge.pipe';
 import { AuthService } from '../../auth/services/auth.service';
 import { Subscription } from 'rxjs';
+import { NgxChartsModule, Color, ScaleType, LegendPosition } from '@swimlane/ngx-charts';
 
 interface DashboardStats {
   total_students: number;
@@ -21,7 +22,7 @@ interface DashboardStats {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatTableModule, MatButtonModule, StatusBadgePipe],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatTableModule, MatButtonModule, NgxChartsModule],
   template: `
     <div class="dashboard-container">
       <div class="welcome-banner glass-card premium-gradient">
@@ -52,37 +53,42 @@ interface DashboardStats {
         </div>
 
         <div class="content-row">
-          <!-- Recent Activity Placeholder -->
+          <!-- Room Occupancy Chart -->
           <mat-card class="section-card glass-card">
             <h2 class="section-title">
-              <mat-icon class="section-icon">history</mat-icon>
-              Dashboard Overview
+              <mat-icon class="section-icon">pie_chart</mat-icon>
+              Room Occupancy
             </h2>
-            <div class="empty-placeholder">
-              <mat-icon>dashboard_customize</mat-icon>
-              <p>Quick overview of hostel operations. Use the sidebar to manage specific sections.</p>
+            <div class="chart-container">
+              <ngx-charts-pie-chart
+                [results]="roomData"
+                [scheme]="colorScheme"
+                [doughnut]="true"
+                [arcWidth]="0.35"
+                [labels]="true"
+                [legend]="true"
+                [legendPosition]="legendPosition"
+                [animations]="true">
+              </ngx-charts-pie-chart>
             </div>
           </mat-card>
 
-          <!-- System Status -->
+          <!-- Operations Overview Chart -->
           <mat-card class="section-card glass-card">
             <h2 class="section-title">
-              <mat-icon class="section-icon">security</mat-icon>
-              System Status
+              <mat-icon class="section-icon">bar_chart</mat-icon>
+              Operations Overview
             </h2>
-            <div class="status-list">
-              <div class="status-item">
-                <span class="status-dot online"></span>
-                <span>API Server Online</span>
-              </div>
-              <div class="status-item">
-                <span class="status-dot online"></span>
-                <span>Database Connected</span>
-              </div>
-              <div class="status-item">
-                <span class="status-dot online"></span>
-                <span>Authentication Service Ready</span>
-              </div>
+            <div class="chart-container">
+              <ngx-charts-bar-vertical
+                [results]="operationsData"
+                [scheme]="colorScheme"
+                [xAxis]="true"
+                [yAxis]="true"
+                [showXAxisLabel]="false"
+                [showYAxisLabel]="false"
+                [animations]="true">
+              </ngx-charts-bar-vertical>
             </div>
           </mat-card>
         </div>
@@ -129,7 +135,7 @@ interface DashboardStats {
     .stat-value { font-size: 32px; font-family: 'Outfit'; font-weight: 800; color: var(--text-main); line-height: 1.1; }
     .stat-label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
     .content-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    .section-card { border-radius: 20px !important; padding: 24px !important; background: var(--card-bg) !important; border: 1px solid var(--border-color); }
+    .section-card { border-radius: 20px !important; padding: 24px 24px 40px !important; background: var(--card-bg) !important; border: 1px solid var(--border-color); min-height: 460px; }
     .section-title { font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0 0 20px; display: flex; align-items: center; gap: 10px; }
     .section-icon { font-size: 22px; color: #4f46e5; }
     .empty-placeholder { text-align: center; padding: 40px 20px; color: var(--text-muted); mat-icon { font-size: 48px; width: 48px; height: 48px; opacity: 0.3; } p { font-size: 14px; margin-top: 8px; } }
@@ -137,6 +143,14 @@ interface DashboardStats {
     .status-item { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--text-main); }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; }
     .status-dot.online { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+    .chart-container { height: 340px; width: 100%; display: flex; justify-content: center; padding-bottom: 40px; }
+    ::ng-deep .ngx-charts { color: var(--text-main) !important; font-family: inherit !important; }
+    ::ng-deep .ngx-charts text { fill: var(--text-muted) !important; font-weight: 500; font-size: 11px; }
+    ::ng-deep .chart-legend { width: 140px !important; float: right !important; }
+    ::ng-deep .chart-legend > div { width: auto !important; max-width: none !important; }
+    ::ng-deep .legend-labels-list { background: transparent !important; width: auto !important; max-width: none !important; display: flex !important; flex-direction: column !important; gap: 8px !important; }
+    ::ng-deep .legend-label { width: auto !important; margin-right: 0 !important; }
+    ::ng-deep .legend-label-text { color: var(--text-main) !important; font-size: 12px !important; white-space: nowrap !important; overflow: visible !important; text-overflow: clip !important; width: auto !important; max-width: none !important; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @media (max-width: 1024px) { .content-row { grid-template-columns: 1fr; } }
   `],
@@ -156,6 +170,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
     { title: 'Pending Payments', value: 0, icon: 'payments', color: '#ea580c', bg: 'rgba(234, 88, 12, 0.1)', key: 'pending_payments' },
     { title: 'Active Complaints', value: 0, icon: 'report_problem', color: '#dc2626', bg: 'rgba(220, 38, 38, 0.1)', key: 'active_complaints' },
   ];
+
+  roomData: any[] = [];
+  operationsData: any[] = [];
+  legendPosition = LegendPosition.Right;
+  
+  colorScheme: Color = {
+    name: 'hostelTheme',
+    selectable: true,
+    group: ScaleType.Ordinal,
+    domain: ['#6366f1', '#0891b2', '#059669', '#d97706', '#dc2626', '#818cf8']
+  };
 
   ngOnInit(): void {
     // 1. Get initial stats from resolver (Pre-fetched)
@@ -198,6 +223,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
           ...card,
           value: (stats as any)[card.key] || 0
         }));
+
+        this.roomData = [
+          { name: 'Occupied', value: stats.occupied_rooms },
+          { name: 'Vacant', value: stats.vacant_rooms }
+        ];
+
+        this.operationsData = [
+          { name: 'Students', value: stats.total_students },
+          { name: 'Payments', value: stats.pending_payments },
+          { name: 'Complaints', value: stats.active_complaints }
+        ];
+
         this.loading = false;
         this.cdr.detectChanges(); // Force UI update
       },

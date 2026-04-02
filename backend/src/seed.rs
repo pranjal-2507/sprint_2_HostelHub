@@ -145,69 +145,173 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), sqlx::Error> {
     .await?;
 
     if let Some((actual_hosteler_id,)) = hosteler_user {
-        // Create sample fee
-        let fee_id = Uuid::new_v4();
-        let due_date = chrono::Utc::now() + chrono::Duration::days(30);
-        let fee_result = sqlx::query(
-            r#"
-            INSERT INTO fees (id, student_id, amount, fee_type, due_date, status, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, NOW())
-            "#
-        )
-        .bind(fee_id)
-        .bind(actual_hosteler_id)
-        .bind(8000.0) // Bind as float for DECIMAL
-        .bind("Monthly Rent")
-        .bind(due_date.naive_utc()) // Bind as NaiveDateTime
-        .bind("pending")
-        .execute(pool)
-        .await;
+        // Clear existing duplicate fees for the sample student
+        let _ = sqlx::query("DELETE FROM fees WHERE student_id = $1").bind(actual_hosteler_id).execute(pool).await;
 
-        if fee_result.is_ok() && fee_result.unwrap().rows_affected() > 0 {
-            println!("✓ Created sample fee record");
+        // Sample Fees with fixed IDs for idempotency
+        let sample_fees = [
+            (
+                Uuid::parse_str("f1e2d3c4-b5a6-4c5d-8e9f-0a1b2c3d4e5f").unwrap(),
+                8000.0,
+                "Monthly Rent",
+                chrono::Utc::now() + chrono::Duration::days(30),
+                "pending"
+            ),
+            (
+                Uuid::parse_str("e1d2c3b4-a5b6-4c5d-8e9f-1a2b3c4d5e6f").unwrap(),
+                2500.0,
+                "Mess Fee",
+                chrono::Utc::now() + chrono::Duration::days(15),
+                "paid"
+            ),
+        ];
+
+        for (fee_id, amount, fee_type, due_date, status) in sample_fees {
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO fees (id, student_id, amount, fee_type, due_date, status, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                ON CONFLICT (id) DO NOTHING
+                "#
+            )
+            .bind(fee_id)
+            .bind(actual_hosteler_id)
+            .bind(amount)
+            .bind(fee_type)
+            .bind(due_date.naive_utc())
+            .bind(status)
+            .execute(pool)
+            .await;
         }
 
-        // Create sample complaint
-        let complaint_id = Uuid::new_v4();
-        let complaint_result = sqlx::query(
-            r#"
-            INSERT INTO complaints (id, student_id, title, description, priority, created_at)
-            VALUES ($1, $2, $3, $4, $5, NOW())
-            "#
-        )
-        .bind(complaint_id)
-        .bind(actual_hosteler_id)
-        .bind("Water leakage in bathroom")
-        .bind("There is continuous water leakage from the bathroom tap")
-        .bind("high")
-        .execute(pool)
-        .await;
+        println!("✓ Created unique, diverse sample fee records");
 
-        if complaint_result.is_ok() && complaint_result.unwrap().rows_affected() > 0 {
-            println!("✓ Created sample complaint");
+        // Clear existing complaints to ensure only the diverse ones are shown
+        let _ = sqlx::query("DELETE FROM complaints").execute(pool).await;
+
+        // Fetch additional student IDs for diversity
+        let sagar: Option<(Uuid,)> = sqlx::query_as("SELECT id FROM users WHERE email = 'sagar.sharma@student.com'").fetch_optional(pool).await?;
+        let gauri: Option<(Uuid,)> = sqlx::query_as("SELECT id FROM users WHERE email = 'gauri.patil@student.com'").fetch_optional(pool).await?;
+        let aditya: Option<(Uuid,)> = sqlx::query_as("SELECT id FROM users WHERE email = 'aditya.roy@student.com'").fetch_optional(pool).await?;
+
+        let student_ids = [
+            actual_hosteler_id,
+            sagar.map(|(id,)| id).unwrap_or(actual_hosteler_id),
+            gauri.map(|(id,)| id).unwrap_or(actual_hosteler_id),
+            aditya.map(|(id,)| id).unwrap_or(actual_hosteler_id),
+        ];
+
+        // Diversity in complaints
+        let sample_complaints = [
+            (
+                Uuid::parse_str("d1a2b3c4-e5f6-4a5b-8c9d-0e1f2a3b4c5d").unwrap(),
+                "Electricity Issue",
+                "The ceiling fan is making a lot of noise and rotating slowly.",
+                "medium",
+                "pending"
+            ),
+            (
+                Uuid::parse_str("a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5e").unwrap(),
+                "Furniture Repair",
+                "The study table in my room has a loose leg and needs fixing.",
+                "low",
+                "in-progress"
+            ),
+            (
+                Uuid::parse_str("b1c2d3e4-f5a6-4b5c-8d9e-1f2a3b4c5d6e").unwrap(),
+                "Cleaning Required",
+                "The corridor outside my room has not been cleaned for a week.",
+                "low",
+                "resolved"
+            ),
+            (
+                Uuid::parse_str("c1d2e3f4-a5b6-4c5d-8e9f-2a3b4c5d6e7f").unwrap(),
+                "Internet Connectivity",
+                "The Wi-Fi signal is very weak in the corner of my room.",
+                "high",
+                "pending"
+            ),
+        ];
+
+        for (i, (comp_id, title, desc, prio, stat)) in sample_complaints.iter().enumerate() {
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO complaints (id, student_id, title, description, priority, status, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, NOW() - INTERVAL '1 day' * $7)
+                ON CONFLICT (id) DO NOTHING
+                "#
+            )
+            .bind(comp_id)
+            .bind(student_ids[i % 4])
+            .bind(title)
+            .bind(desc)
+            .bind(prio)
+            .bind(stat)
+            .bind(i as i32)
+            .execute(pool)
+            .await;
         }
+
+        println!("✓ Created diverse sample complaints");
     }
 
     if let Some((actual_admin_id,)) = admin_user {
-        // Create sample notice
-        let notice_id = Uuid::new_v4();
-        let notice_result = sqlx::query(
-            r#"
-            INSERT INTO notices (id, title, content, priority, created_by, created_at)
-            VALUES ($1, $2, $3, $4, $5, NOW())
-            "#
-        )
-        .bind(notice_id)
-        .bind("Fee Payment Reminder")
-        .bind("Monthly fees are due by the 5th of every month. Late payments will incur penalties.")
-        .bind("high")
-        .bind(actual_admin_id)
-        .execute(pool)
-        .await;
+        // Sample notices with fixed IDs for idempotency
+        let notice_1 = Uuid::parse_str("d1e2f3a4-b5c6-4d5e-8f9a-3b4c5d6e7f8a").unwrap();
+        let notice_2 = Uuid::parse_str("e2f3a4b5-c6d7-4e5f-9a0b-4c5d6e7f8a9b").unwrap();
+        let notice_3 = Uuid::parse_str("f3a4b5c6-d7e8-4f5a-0b1c-5d6e7f8a9b0c").unwrap();
 
-        if notice_result.is_ok() && notice_result.unwrap().rows_affected() > 0 {
-            println!("✓ Created sample notice");
+        // Cleanup old non-idempotent notices to avoid duplicates in UI
+        let _ = sqlx::query("DELETE FROM notices WHERE title IN ('Fee Payment Reminder', 'Welcome to HostelHub v2', 'Maintenance Schedule') AND id NOT IN ($1, $2, $3)")
+            .bind(notice_1)
+            .bind(notice_2)
+            .bind(notice_3)
+            .execute(pool)
+            .await;
+
+        let sample_notices = vec![
+            (
+                notice_1,
+                "Fee Payment Reminder",
+                "Monthly fees are due by the 5th of every month. Late payments will incur penalties.",
+                "general",
+                "high"
+            ),
+            (
+                notice_2,
+                "Welcome to HostelHub v2",
+                "We are excited to launch the new management system.",
+                "general",
+                "low"
+            ),
+            (
+                notice_3,
+                "Maintenance Schedule",
+                "The water tanks will be cleaned this Sunday from 10 AM to 2 PM.",
+                "maintenance",
+                "medium"
+            )
+        ];
+
+        for (id, title, content, category, priority) in sample_notices {
+            let _ = sqlx::query(
+                r#"
+                INSERT INTO notices (id, title, content, category, priority, created_by, created_at)
+                VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                ON CONFLICT (id) DO NOTHING
+                "#
+            )
+            .bind(id)
+            .bind(title)
+            .bind(content)
+            .bind(category)
+            .bind(priority)
+            .bind(actual_admin_id)
+            .execute(pool)
+            .await;
         }
+
+        println!("✓ Created idempotent sample notices");
     }
 
     println!("Database seeding completed successfully!");

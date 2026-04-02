@@ -46,6 +46,10 @@ export const routes: Routes = [
                 path: 'notices',
                 loadChildren: () => import('./modules/notices/notices.routes').then(m => m.noticesRoutes)
             },
+            {
+                path: 'profile',
+                loadComponent: () => import('./modules/admin/profile/admin-profile.component').then(m => m.AdminProfileComponent)
+            },
             { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
         ]
     },

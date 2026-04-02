@@ -11,7 +11,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SearchFilterComponent } from '../../../shared/components/search-filter/search-filter.component';
-import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { StudentFormDialogComponent } from '../student-form-dialog/student-form-dialog.component';
 import { Student } from '../../../core/models';
@@ -26,7 +25,7 @@ import { RouterModule } from '@angular/router';
   imports: [
     CommonModule, MatTableModule, MatPaginatorModule, MatSortModule, MatCardModule,
     MatButtonModule, MatIconModule, MatDialogModule, MatSelectModule,
-    MatFormFieldModule, MatSnackBarModule, SearchFilterComponent, StatusBadgePipe,
+    MatFormFieldModule, MatSnackBarModule, SearchFilterComponent,
     MatTooltipModule, RouterModule
   ],
   template: `
@@ -171,7 +170,11 @@ export class StudentListComponent implements OnInit {
   }
 
   filterByRole(role: string): void {
-    this.dataSource.data = role ? this.allStudents.filter(s => s.role === role) : this.allStudents;
+    this.dataSource.data = role ? this.allStudents.filter(s => s.role.toLowerCase() === role.toLowerCase()) : this.allStudents;
+    if (this.paginator) {
+      this.paginator.firstPage();
+    }
+    this.cdr.detectChanges();
   }
 
   openAddDialog(): void {

@@ -256,7 +256,6 @@ async fn main() {
             std::process::exit(1);
         }
     };
-
     println!("✓ Backend server listening on {}", addr);
 
     if let Err(e) = axum::serve(listener, app).await {

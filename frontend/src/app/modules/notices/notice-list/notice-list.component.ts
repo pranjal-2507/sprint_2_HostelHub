@@ -89,8 +89,8 @@ import { NoticeService } from '../../../core/services/notice.service';
     .notice-card.high-priority { border-left: 4px solid #dc2626 !important; }
     .notice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
     .notice-meta { display: flex; gap: 8px; }
-    .category-chip, .priority-chip { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-    .cat-general { background: var(--surface-2); color: var(--text-muted); }
+    .category-chip, .priority-chip { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; }
+    .cat-general { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
     .cat-event { background: #eef2ff; color: #4f46e5; }
     .cat-rules { background: #ecfeff; color: #0891b2; }
     .cat-emergency { background: #fef2f2; color: #dc2626; }
@@ -172,9 +172,16 @@ export class NoticeListComponent implements OnInit {
     const dialogRef = this.dialog.open(NoticeFormDialogComponent, { width: '520px', data: { notice } });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        // Implement update API if needed
-        this.fetchNotices();
-        this.snackBar.open('Notice updated successfully', 'Close', { duration: 3000 });
+        this.noticeService.updateNotice(notice.id, result).subscribe({
+          next: () => {
+            this.fetchNotices();
+            this.snackBar.open('Notice updated successfully', 'Close', { duration: 3000 });
+          },
+          error: (err) => {
+            console.error('Error updating notice', err);
+            this.snackBar.open('Failed to update notice', 'Close', { duration: 3000 });
+          }
+        });
       }
     });
   }

@@ -29,6 +29,15 @@ pub struct RegisterRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct UpdateProfileRequest {
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub phone: Option<String>,
+    pub course: Option<String>,
+    pub year: Option<i32>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
@@ -63,7 +72,7 @@ pub struct Room {
     pub occupancy: Option<i32>,
     pub room_type: Option<String>, // single, double, triple, dormitory
     pub status: Option<String>,    // available, occupied, maintenance, reserved
-    pub price_per_month: f64,
+    pub price_per_month: Option<f64>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -74,7 +83,18 @@ pub struct CreateRoomRequest {
     pub floor: i32,
     pub capacity: i32,
     pub room_type: String,
+    pub status: String,
     pub price_per_month: f64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateRoomRequest {
+    pub room_number: Option<String>,
+    pub floor: Option<i32>,
+    pub capacity: Option<i32>,
+    pub room_type: Option<String>,
+    pub status: Option<String>,
+    pub price_per_month: Option<f64>,
 }
 
 // Fee Management Models
@@ -117,6 +137,8 @@ pub struct CreateFeeRequest {
 pub struct Complaint {
     pub id: Uuid,
     pub student_id: Uuid,
+    pub student_name: Option<String>,
+    pub room_number: Option<String>,
     pub title: String,
     pub description: String,
     pub status: Option<String>,
@@ -157,6 +179,14 @@ pub struct CreateNoticeRequest {
     pub priority: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UpdateNoticeRequest {
+    pub title: Option<String>,
+    pub content: Option<String>,
+    pub category: Option<String>,
+    pub priority: Option<String>,
+}
+
 // Dashboard Stats Models
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DashboardStats {
@@ -166,6 +196,9 @@ pub struct DashboardStats {
     pub vacant_rooms: i64,
     pub pending_payments: i64,
     pub active_complaints: i64,
+    pub overdue_payments: i64,
+    pub pending_maintenance: i64,
+    pub visitors_checked_in: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

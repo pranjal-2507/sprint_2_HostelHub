@@ -11,7 +11,7 @@ pub async fn get_all_rooms(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Room>>, (StatusCode, String)> {
     let rooms: Vec<Room> = sqlx::query_as(
-        "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month::FLOAT8, status, created_at FROM rooms ORDER BY room_number"
+        "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at FROM rooms ORDER BY room_number"
     )
     .fetch_all(&state.db)
     .await
@@ -49,7 +49,7 @@ pub async fn create_room(
     match result {
         Ok(_) => {
             let room: Room = sqlx::query_as(
-                "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month::FLOAT8, status, created_at FROM rooms WHERE id = $1"
+                "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at FROM rooms WHERE id = $1"
             )
             .bind(room_id)
             .fetch_one(&state.db)
