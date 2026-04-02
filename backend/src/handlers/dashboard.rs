@@ -5,12 +5,29 @@ use uuid::Uuid;
 use crate::auth::middleware::{RequireAuth, RequireAdmin};
 use crate::db::AppState;
 use crate::models::{DashboardStats, HostelerDashboardData, UserResponse, Room, Fee, Complaint, Notice};
+use deadpool_redis::redis::AsyncCommands;
+use serde_json;
 
 pub async fn get_admin_dashboard_stats(
     RequireAdmin(_user_id): RequireAdmin,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<DashboardStats>, (StatusCode, String)> {
-    println!("Fetching admin dashboard stats...");
+    let cache_key = "admin_dashboard_stats";
+    
+    // 1. Try to get from Redis
+    let mut conn = state.redis.get().await.map_err(|e| {
+        eprintln!("Redis connection error: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Cache error".to_string())
+    })?;
+
+    if let Ok(cached_data) = conn.get::<_, String>(cache_key).await {
+        if let Ok(stats) = serde_json::from_str::<DashboardStats>(&cached_data) {
+            println!("✓ Admin stats cache hit!");
+            return Ok(Json(stats));
+        }
+    }
+
+    println!("Cache miss. Fetching admin dashboard stats from DB...");
     
     let total_students: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM users WHERE role = 'hosteler'"
@@ -73,6 +90,11 @@ pub async fn get_admin_dashboard_stats(
         active_complaints: active_complaints.0,
     };
 
+    // 2. Save to Redis (TTL 60s)
+    if let Ok(json) = serde_json::to_string(&stats) {
+        let _: Result<(), _> = conn.set_ex(cache_key, json, 60).await;
+    }
+
     Ok(Json(stats))
 }
 
@@ -82,6 +104,23 @@ pub async fn get_hosteler_dashboard(
 ) -> Result<Json<HostelerDashboardData>, (StatusCode, String)> {
     let uuid = Uuid::parse_str(&user_id)
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()))?;
+
+    let cache_key = format!("hosteler_dashboard:{}", user_id);
+    
+    // 1. Try to get from Redis
+    let mut conn = state.redis.get().await.map_err(|e| {
+        eprintln!("Redis connection error: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Cache error".to_string())
+    })?;
+
+    if let Ok(cached_data) = conn.get::<_, String>(&cache_key).await {
+        if let Ok(data) = serde_json::from_str::<HostelerDashboardData>(&cached_data) {
+            println!("✓ Hosteler dashboard cache hit for user {}", user_id);
+            return Ok(Json(data));
+        }
+    }
+
+    println!("Cache miss. Fetching hosteler dashboard from DB for user {}...", user_id);
 
     // Get user info
     let user: crate::models::User = sqlx::query_as(
@@ -131,7 +170,7 @@ pub async fn get_hosteler_dashboard(
 
     // Get recent notices
     let recent_notices: Vec<Notice> = sqlx::query_as(
-        "SELECT id, title, content, priority, created_by, created_at FROM notices ORDER BY created_at DESC LIMIT 5"
+        "SELECT id, title, content, category, priority, created_by, created_at FROM notices ORDER BY created_at DESC LIMIT 5"
     )
     .fetch_all(&state.db)
     .await
@@ -153,6 +192,11 @@ pub async fn get_hosteler_dashboard(
         recent_complaints,
         recent_notices,
     };
+
+    // 2. Save to Redis (TTL 60s)
+    if let Ok(json) = serde_json::to_string(&dashboard_data) {
+        let _: Result<(), _> = conn.set_ex(&cache_key, json, 60).await;
+    }
 
     Ok(Json(dashboard_data))
 }

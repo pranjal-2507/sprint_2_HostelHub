@@ -13,7 +13,7 @@ import { NavbarComponent } from '../navbar/navbar.component';
     <div class="layout-container">
       <app-navbar (toggleSidebar)="sidenav.toggle()"></app-navbar>
       <mat-sidenav-container class="sidenav-container">
-        <mat-sidenav #sidenav mode="side" opened class="sidenav">
+        <mat-sidenav #sidenav mode="side" opened class="sidenav glass-panel">
           <app-sidebar></app-sidebar>
         </mat-sidenav>
         <mat-sidenav-content class="main-content">
@@ -25,12 +25,12 @@ import { NavbarComponent } from '../navbar/navbar.component';
     </div>
   `,
   styles: [`
-    .layout-container { display: flex; flex-direction: column; height: 100vh; background: var(--bg-color); }
-    .sidenav-container { flex: 1; background: transparent; }
-    .sidenav { width: 240px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); }
-    .main-content { background: var(--bg-color); }
-    .content-wrapper { padding: 28px 32px; min-height: calc(100vh - 56px); }
-    @media (max-width: 768px) { .content-wrapper { padding: 16px; } }
+    .layout-container { display: flex; flex-direction: column; height: 100vh; background: transparent; }
+    .sidenav-container { flex: 1; background: transparent; padding: 16px; overflow: hidden; }
+    .sidenav { width: 260px; background: transparent; border: none; margin-right: 24px; border-radius: 24px; overflow: hidden; }
+    .main-content { background: transparent; border-radius: 24px; overflow-y: auto; }
+    .content-wrapper { padding: 8px 16px; min-height: calc(100vh - 100px); }
+    @media (max-width: 768px) { .sidenav-container { padding: 8px; } .sidenav { margin-right: 0; } .content-wrapper { padding: 8px; } }
   `],
 })
 export class MainLayoutComponent { }

@@ -12,8 +12,8 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    // Added authInterceptor to the chain
-    provideHttpClient(withInterceptors([authInterceptor, apiInterceptor, errorInterceptor])),
+    // Simplified interceptor chain to avoid conflicts
+    provideHttpClient(withInterceptors([apiInterceptor, errorInterceptor])),
     provideAnimationsAsync(),
   ],
 };

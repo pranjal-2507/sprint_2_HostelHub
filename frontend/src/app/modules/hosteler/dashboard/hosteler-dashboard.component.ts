@@ -1,12 +1,13 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../auth/services/auth.service';
+import { Subscription } from 'rxjs';
 import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
 
 interface HostelerDashboardData {
@@ -20,14 +21,14 @@ interface HostelerDashboardData {
     year?: number;
     room_number?: string;
   };
-  room_info?: {
+    room_info?: {
     id: string;
     room_number: string;
     floor: number;
     capacity: number;
-    occupied: number;
+    occupancy: number;
     room_type: string;
-    rent: number;
+    price_per_month: number;
     status: string;
   };
   fee_status: Array<{
@@ -62,9 +63,9 @@ interface HostelerDashboardData {
   imports: [CommonModule, MatCardModule, MatIconModule, MatTableModule, MatButtonModule, MatChipsModule, StatusBadgePipe],
   template: `
     <div class="dashboard-container">
-      <div class="welcome-banner glass-card premium-gradient-success">
+      <div class="welcome-banner glass-card premium-gradient">
         <div class="welcome-text">
-          <h1>Welcome back, {{ dashboardData?.user?.name || authService.currentUserValue?.name }}! 👋</h1>
+          <h1>Welcome back, {{ dashboardData?.user?.name || authService.currentUserValue?.name }} 👋</h1>
           <p>Here's what's happening with your stay at HostelHub.</p>
         </div>
         <div class="welcome-stats">
@@ -134,7 +135,7 @@ interface HostelerDashboardData {
               <div class="info-row">
                 <div class="info-col">
                   <span class="label">Rent</span>
-                  <span class="val">₹{{ dashboardData?.room_info?.rent | number }}/mo</span>
+                  <span class="val">₹{{ dashboardData?.room_info?.price_per_month | number }}/mo</span>
                 </div>
                 <div class="info-col">
                   <span class="label">Status</span>
@@ -220,41 +221,40 @@ interface HostelerDashboardData {
     </div>
   `,
   styles: [`
-    .dashboard-container { display: flex; flex-direction: column; gap: 24px; animation: fadeIn 0.4s ease-out; }
+    .dashboard-container { display: flex; flex-direction: column; gap: 24px; animation: fadeIn 0.5s ease-out; max-width: 1200px; padding: 0 16px 40px; }
     
     .welcome-banner {
-      padding: 32px; border-radius: 24px !important; color: #fff;
+      padding: 32px 40px; border-radius: 24px !important; color: #fff;
       display: flex; justify-content: space-between; align-items: center;
-      box-shadow: 0 12px 24px rgba(5, 150, 105, 0.2) !important;
     }
-    .welcome-text h1 { font-size: 28px; font-weight: 800; margin: 0; }
-    .welcome-text p { font-size: 15px; opacity: 0.9; margin: 8px 0 0; }
+    .welcome-text h1 { font-size: 28px; font-weight: 800; margin: 0; font-family: 'Outfit'; }
+    .welcome-text p { font-size: 15px; opacity: 0.9; margin: 8px 0 0; font-family: 'Inter'; font-weight: 400; }
     
-    .welcome-stats { display: flex; gap: 32px; }
+    .welcome-stats { display: flex; gap: 40px; }
     .mini-stat { display: flex; flex-direction: column; align-items: flex-end; }
-    .mini-stat .label { font-size: 12px; font-weight: 600; text-transform: uppercase; opacity: 0.8; }
-    .mini-stat .value { font-size: 24px; font-weight: 800; }
+    .mini-stat .label { font-size: 13px; font-weight: 600; text-transform: uppercase; opacity: 0.8; letter-spacing: 0.5px; }
+    .mini-stat .value { font-size: 28px; font-weight: 800; font-family: 'Outfit'; line-height: 1.1; }
     
     .summary-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px;
     }
     .summary-card {
-      padding: 24px; border-radius: 18px !important; display: flex; align-items: center; gap: 16px;
-      transition: transform 0.2s ease;
-      &:hover { transform: translateY(-4px); }
+      padding: 24px; border-radius: 24px !important; display: flex; align-items: center; gap: 20px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      &:hover { transform: translateY(-4px) scale(1.02); }
     }
     .card-icon {
-      width: 54px; height: 54px; border-radius: 14px;
+      width: 64px; height: 64px; border-radius: 20px;
       display: flex; align-items: center; justify-content: center;
-      mat-icon { font-size: 28px; width: 28px; height: 28px; }
+      mat-icon { font-size: 32px; width: 32px; height: 32px; }
     }
-    .card-icon.room { background: var(--badge-success-bg); color: var(--badge-success-text); }
-    .card-icon.fee { background: var(--badge-warning-bg); color: var(--badge-warning-text); }
-    .card-icon.complaint { background: var(--badge-danger-bg); color: var(--badge-danger-text); }
+    .card-icon.room { background: rgba(16, 185, 129, 0.15); color: #059669; }
+    .card-icon.fee { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+    .card-icon.complaint { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
     
-    .card-body { display: flex; flex-direction: column; }
-    .card-value { font-size: 24px; font-weight: 800; color: var(--text-main); }
-    .card-label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+    .card-body { display: flex; flex-direction: column; justify-content: center; }
+    .card-value { font-size: 32px; font-family: 'Outfit'; font-weight: 800; color: var(--text-main); line-height: 1.1; }
+    .card-label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
     
     .content-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; }
     .tables-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; }
@@ -289,12 +289,29 @@ interface HostelerDashboardData {
     }
   `],
 })
-export class HostelerDashboardComponent implements OnInit {
+export class HostelerDashboardComponent implements OnInit, OnDestroy {
   dashboardData: HostelerDashboardData | null = null;
   public authService = inject(AuthService);
+  private route = inject(ActivatedRoute);
+  private dataSubscription?: Subscription;
 
   ngOnInit() {
-    this.loadDashboardData();
+    // 1. Get initial data from resolver (Pre-fetched before page open)
+    this.dashboardData = this.route.snapshot.data['dashboardData'];
+
+    // 2. Subscribe to background updates (Stale-While-Revalidate)
+    this.dataSubscription = this.authService.hostelerDashboard$.subscribe(data => {
+      if (data) this.dashboardData = data;
+    });
+
+    // 3. Fallback: If resolver failed, fetch manually
+    if (!this.dashboardData) {
+      this.loadDashboardData();
+    }
+  }
+
+  ngOnDestroy() {
+    this.dataSubscription?.unsubscribe();
   }
 
   private loadDashboardData() {

@@ -1,4 +1,8 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
+import { dashboardResolver } from './core/resolvers/dashboard.resolver';
+import { roomResolver } from './core/resolvers/room.resolver';
 
 export const routes: Routes = [
     // Auth routes
@@ -14,11 +18,13 @@ export const routes: Routes = [
     // Admin dashboard & modules
     {
         path: 'admin',
+        canActivate: [authGuard, roleGuard('admin')],
         loadComponent: () => import('./layout/main-layout/main-layout.component').then(m => m.MainLayoutComponent),
         children: [
             {
                 path: 'dashboard',
-                loadComponent: () => import('./modules/dashboard/dashboard.component').then(m => m.DashboardComponent)
+                loadComponent: () => import('./modules/dashboard/dashboard.component').then(m => m.DashboardComponent),
+                resolve: { dashboardData: dashboardResolver }
             },
             {
                 path: 'rooms',
@@ -47,15 +53,18 @@ export const routes: Routes = [
     // Hosteler dashboard
     {
         path: 'hosteler',
+        canActivate: [authGuard, roleGuard('hosteler')],
         loadComponent: () => import('./layout/hosteler-layout/hosteler-layout.component').then(m => m.HostelerLayoutComponent),
         children: [
             {
                 path: 'dashboard',
-                loadComponent: () => import('./modules/hosteler/dashboard/hosteler-dashboard.component').then(m => m.HostelerDashboardComponent)
+                loadComponent: () => import('./modules/hosteler/dashboard/hosteler-dashboard.component').then(m => m.HostelerDashboardComponent),
+                resolve: { dashboardData: dashboardResolver }
             },
             {
                 path: 'my-room',
-                loadComponent: () => import('./modules/hosteler/my-room/my-room.component').then(m => m.MyRoomComponent)
+                loadComponent: () => import('./modules/hosteler/my-room/my-room.component').then(m => m.MyRoomComponent),
+                resolve: { roomInfo: roomResolver }
             },
             {
                 path: 'payments',

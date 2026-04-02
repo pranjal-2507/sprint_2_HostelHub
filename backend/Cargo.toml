@@ -13,5 +13,9 @@ jsonwebtoken = "9.3"
 argon2 = "0.5"
 uuid = { version = "1.8", features = ["v4", "serde"] }
 dotenv = "0.15"
-tower-http = { version = "0.5", features = ["cors"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
 chrono = { version = "0.4", features = ["serde"] }
+redis = { version = "0.24", features = ["tokio-comp", "json"] }
+deadpool-redis = "0.14"

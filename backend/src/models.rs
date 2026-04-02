@@ -40,7 +40,7 @@ pub struct AuthResponse {
     pub user: UserResponse,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UserResponse {
     pub id: Uuid,
     pub name: String,
@@ -158,7 +158,7 @@ pub struct CreateNoticeRequest {
 }
 
 // Dashboard Stats Models
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DashboardStats {
     pub total_students: i64,
     pub total_rooms: i64,
@@ -168,7 +168,7 @@ pub struct DashboardStats {
     pub active_complaints: i64,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HostelerDashboardData {
     pub user: UserResponse,
     pub room_info: Option<Room>,

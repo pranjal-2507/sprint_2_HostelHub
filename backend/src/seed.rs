@@ -28,18 +28,17 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), sqlx::Error> {
     
     println!("✓ Ensured admin user: {}", admin_email);
 
-    // Also fix admin@hostelhub.com (seeded by supabase_seed.sql with bcrypt hash)
-    // Update its password_hash to Argon2 format so login works
-    let update_result = sqlx::query(
-        "UPDATE users SET password_hash = $1 WHERE email = 'admin@hostelhub.com'"
+    // Fix all admin passwords seeded by supabase_seed.sql to use Argon2
+    let update_admin_result = sqlx::query(
+        "UPDATE users SET password_hash = $1 WHERE role = 'admin'"
     )
     .bind(&admin_password)
     .execute(pool)
     .await;
 
-    match update_result {
-        Ok(res) if res.rows_affected() > 0 => println!("✓ Updated password for admin@hostelhub.com to Argon2"),
-        Ok(_) => println!("! admin@hostelhub.com not found for password update"),
+    match update_admin_result {
+        Ok(res) if res.rows_affected() > 0 => println!("✓ Updated password for {} admins to Argon2", res.rows_affected()),
+        Ok(_) => println!("! No extra admins found for password update"),
         Err(e) => eprintln!("! Error updating admin password: {}", e),
     }
 
@@ -64,18 +63,18 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), sqlx::Error> {
 
     // Create sample hosteler
     let hosteler_id = Uuid::new_v4();
-    let hosteler_password = hash_password("student123");
+    let hosteler_password = hash_password("password123");
     
     let hosteler_result = sqlx::query(
         r#"
         INSERT INTO users (id, name, email, password_hash, role, phone, course, year, room_number, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
-        ON CONFLICT (email) DO NOTHING
+        ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash
         "#
     )
     .bind(hosteler_id)
-    .bind("Rahul Sharma")
-    .bind("rahul@hostelhub.com")
+    .bind("Sagar Raut")
+    .bind("student1@gmail.com")
     .bind(&hosteler_password)
     .bind("hosteler")
     .bind("9876543210")
@@ -86,7 +85,19 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), sqlx::Error> {
     .await?;
 
     if hosteler_result.rows_affected() > 0 {
-        println!("✓ Created student user: rahul@hostelhub.com");
+        println!("✓ Created student user: student1@gmail.com");
+    }
+
+    // Fix all hosteler passwords seeded by supabase_seed.sql to use Argon2 (password123)
+    let update_students_result = sqlx::query(
+        "UPDATE users SET password_hash = $1 WHERE role = 'hosteler'"
+    )
+    .bind(&hosteler_password)
+    .execute(pool)
+    .await;
+    
+    if let Ok(res) = update_students_result {
+        println!("✓ Updated password for {} students to Argon2 format", res.rows_affected());
     }
 
     // Create sample rooms
@@ -128,7 +139,7 @@ pub async fn seed_database(pool: &PgPool) -> Result<(), sqlx::Error> {
     .await?;
 
     let hosteler_user: Option<(Uuid,)> = sqlx::query_as(
-        "SELECT id FROM users WHERE email = 'rahul@hostelhub.com'"
+        "SELECT id FROM users WHERE email = 'student1@gmail.com'"
     )
     .fetch_optional(pool)
     .await?;

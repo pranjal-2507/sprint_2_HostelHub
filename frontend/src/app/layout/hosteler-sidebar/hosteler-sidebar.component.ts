@@ -33,42 +33,52 @@ import { MatIconModule } from '@angular/material/icon';
     </div>
   `,
   styles: [`
-    .sidebar { display: flex; flex-direction: column; height: 100%; background: var(--sidebar-bg); }
+    .sidebar { display: flex; flex-direction: column; height: 100%; background: transparent; padding-top: 10px; }
     .brand {
-      padding: 24px 20px; border-bottom: 1px solid var(--border-color);
-      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+      padding: 20px 24px; 
+      display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
     }
-    .brand-name { font-size: 20px; font-weight: 800; color: #10b981; letter-spacing: -0.5px; }
+    .brand-name { font-size: 24px; font-family: 'Outfit'; font-weight: 800; color: var(--text-heading); letter-spacing: -0.5px; }
     .role-tag {
       font-size: 10px; font-weight: 700; text-transform: uppercase;
-      background: var(--badge-success-bg); color: var(--badge-success-text); padding: 2px 8px; border-radius: 6px;
-      letter-spacing: 0.5px;
+      background: var(--primary-accent); color: white; padding: 4px 10px; border-radius: 12px;
+      letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
     
-    .nav-container { flex: 1; overflow-y: auto; padding: 0 12px 24px; }
-    .nav-group { margin-top: 20px; }
+    .nav-container { flex: 1; overflow-y: auto; padding: 0 16px 24px; }
+    .nav-group { margin-top: 24px; }
     .group-title {
       font-size: 11px; font-weight: 700; color: var(--text-muted);
       text-transform: uppercase; letter-spacing: 1px;
-      padding: 0 12px; margin-bottom: 8px;
+      padding: 0 16px; margin-bottom: 12px;
     }
     
     .nav-list { padding: 0 !important; }
     .nav-item {
-      height: 44px !important; border-radius: 10px !important; margin-bottom: 4px;
-      color: var(--text-muted) !important; transition: all 0.2s ease;
+      height: 48px !important; border-radius: 16px !important; margin-bottom: 8px;
+      color: var(--text-muted) !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       
-      mat-icon { font-size: 20px; width: 20px; height: 20px; margin-right: 12px; color: var(--text-muted); }
-      span { font-size: 14px; font-weight: 500; }
+      mat-icon { font-size: 22px; width: 22px; height: 22px; margin-right: 14px; color: var(--text-muted); transition: all 0.3s; }
+      span { font-size: 15px; font-weight: 500; font-family: 'Inter'; }
       
-      &:hover { background: var(--bg-color) !important; color: var(--text-main) !important; }
+      border: 1px solid transparent;
+      
+      &:hover { 
+        background: rgba(255, 255, 255, 0.4) !important; 
+        color: var(--text-main) !important; 
+        border: 1px solid var(--border-color);
+        transform: translateX(4px);
+      }
     }
     
     .active-link {
-      background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
-      color: #fff !important; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+      background: var(--primary-gradient) !important;
+      color: white !important; 
+      box-shadow: var(--shadow-float);
+      border: none !important;
+      transform: translateX(4px);
       
-      mat-icon { color: #fff !important; }
+      mat-icon { color: white !important; }
       span { font-weight: 600; }
     }
   `],

@@ -4,6 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatButtonModule } from '@angular/material/button';
+import { ActivatedRoute } from '@angular/router';
 import { RoomService } from '../../../core/services/room.service';
 
 @Component({
@@ -178,8 +179,9 @@ import { RoomService } from '../../../core/services/room.service';
 })
 export class MyRoomComponent implements OnInit {
   roomInfo: any = null;
-  loading = true;
+  loading = false;
   private roomService = inject(RoomService);
+  private route = inject(ActivatedRoute);
 
   roomAmenities = [
     { name: 'Wi-Fi Internet', icon: 'wifi', available: true },
@@ -189,7 +191,13 @@ export class MyRoomComponent implements OnInit {
   ];
 
   ngOnInit() {
-    this.loadRoomInfo();
+    // 1. Get initial data from resolver (Pre-fetched)
+    this.roomInfo = this.route.snapshot.data['roomInfo'];
+    
+    // 2. Fallback if resolver didn't provide data
+    if (!this.roomInfo) {
+      this.loadRoomInfo();
+    }
   }
 
   loadRoomInfo() {
