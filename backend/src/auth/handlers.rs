@@ -10,7 +10,7 @@ use sqlx::Postgres;
 use crate::auth::middleware::RequireAuth;
 use crate::auth::service::{generate_jwt, hash_password, verify_password};
 use crate::db::AppState;
-use crate::models::{AuthResponse, LoginRequest, RegisterRequest, User, UserResponse};
+use crate::models::{AuthResponse, LoginRequest, RegisterRequest, UpdateProfileRequest, User, UserResponse};
 
 pub async fn register(
     State(state): State<Arc<AppState>>,
@@ -133,4 +133,47 @@ pub async fn me(
     } else {
         Err((StatusCode::NOT_FOUND, "User not found".to_string()))
     }
+}
+
+pub async fn update_profile(
+    RequireAuth(user_id): RequireAuth,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<UpdateProfileRequest>,
+) -> Result<Json<UserResponse>, (StatusCode, String)> {
+    let uuid = Uuid::parse_str(&user_id)
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()))?;
+
+    let result = sqlx::query_as::<Postgres, User>(
+        r#"
+        UPDATE users 
+        SET 
+            name = COALESCE($1, name),
+            email = COALESCE($2, email),
+            phone = COALESCE($3, phone),
+            course = COALESCE($4, course),
+            year = COALESCE($5, year)
+        WHERE id = $6
+        RETURNING id, name, email, password_hash, role, phone, course, year, room_number, created_at
+        "#
+    )
+    .bind(payload.name)
+    .bind(payload.email)
+    .bind(payload.phone)
+    .bind(payload.course)
+    .bind(payload.year)
+    .bind(uuid)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))?;
+
+    Ok(Json(UserResponse {
+        id: result.id,
+        name: result.name,
+        email: result.email,
+        role: result.role,
+        phone: result.phone,
+        course: result.course,
+        year: result.year,
+        room_number: result.room_number,
+    }))
 }

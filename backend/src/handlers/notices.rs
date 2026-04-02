@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::auth::middleware::{RequireAdmin, RequireAuth};
 use crate::db::AppState;
-use crate::models::{Notice, CreateNoticeRequest};
+use crate::models::{Notice, CreateNoticeRequest, UpdateNoticeRequest};
 
 pub async fn get_all_notices(
     RequireAuth(_user_id): RequireAuth,
@@ -66,6 +66,39 @@ pub async fn create_notice(
             Err((StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))
         }
     }
+}
+
+pub async fn update_notice(
+    RequireAdmin(_user_id): RequireAdmin,
+    State(state): State<Arc<AppState>>,
+    Path(notice_id): Path<Uuid>,
+    Json(payload): Json<UpdateNoticeRequest>,
+) -> Result<Json<Notice>, (StatusCode, String)> {
+    let notice = sqlx::query_as::<_, Notice>(
+        r#"
+        UPDATE notices 
+        SET 
+            title = COALESCE($1, title),
+            content = COALESCE($2, content),
+            category = COALESCE($3, category),
+            priority = COALESCE($4, priority)
+        WHERE id = $5
+        RETURNING id, title, content, category, priority, created_by, created_at
+        "#
+    )
+    .bind(payload.title)
+    .bind(payload.content)
+    .bind(payload.category)
+    .bind(payload.priority)
+    .bind(notice_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Error updating notice: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
+
+    Ok(Json(notice))
 }
 
 pub async fn delete_notice(

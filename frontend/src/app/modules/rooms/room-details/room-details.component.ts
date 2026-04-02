@@ -37,7 +37,7 @@ import { Room } from '../../../core/models';
           </div>
           <div class="detail-item">
             <span class="label">Price/Month</span>
-            <span class="value">₹{{ room.rent | number }}</span>
+            <span class="value">₹{{ room.price_per_month | number }}</span>
           </div>
         </div>
       </mat-card-content>
