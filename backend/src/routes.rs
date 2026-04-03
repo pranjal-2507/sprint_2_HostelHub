@@ -30,6 +30,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         
         // Student management routes (Admin only)
         .route("/api/admin/students", get(students::get_all_students))
+        .route("/api/admin/students", post(students::create_student))
         .route("/api/admin/students/:student_id", get(students::get_student_by_id))
         .route("/api/admin/students/:student_id", put(students::update_student))
         .route("/api/admin/students/:student_id/assign-room/:room_number", put(students::assign_room))
