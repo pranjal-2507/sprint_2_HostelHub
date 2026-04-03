@@ -5,12 +5,29 @@ use uuid::Uuid;
 use crate::auth::middleware::{RequireAuth, RequireAdmin};
 use crate::db::AppState;
 use crate::models::{DashboardStats, HostelerDashboardData, UserResponse, Room, Fee, Complaint, Notice};
+use deadpool_redis::redis::AsyncCommands;
+use serde_json;
 
 pub async fn get_admin_dashboard_stats(
     RequireAdmin(_user_id): RequireAdmin,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<DashboardStats>, (StatusCode, String)> {
-    println!("Fetching admin dashboard stats...");
+    let cache_key = "admin_dashboard_stats";
+    
+    // 1. Try to get from Redis
+    let mut conn = state.redis.get().await.map_err(|e| {
+        eprintln!("Redis connection error: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Cache error".to_string())
+    })?;
+
+    if let Ok(cached_data) = conn.get::<_, String>(cache_key).await {
+        if let Ok(stats) = serde_json::from_str::<DashboardStats>(&cached_data) {
+            println!("✓ Admin stats cache hit!");
+            return Ok(Json(stats));
+        }
+    }
+
+    println!("Cache miss. Fetching admin dashboard stats from DB...");
     
     let total_students: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM users WHERE role = 'hosteler'"
@@ -62,6 +79,36 @@ pub async fn get_admin_dashboard_stats(
         (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
     })?;
 
+    let overdue_payments: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM fees WHERE status = 'overdue'"
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Error counting overdue payments: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
+
+    let pending_maintenance: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM maintenance_requests WHERE status = 'pending'"
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Error counting pending maintenance: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
+
+    let visitors_checked_in: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM visitors WHERE exit_time IS NULL"
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Error counting checked-in visitors: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
+
     println!("Dashboard stats fetched successfully: Students={}, Rooms={}, Occupied={}", total_students.0, total_rooms.0, occupied_rooms.0);
 
     let stats = DashboardStats {
@@ -71,7 +118,15 @@ pub async fn get_admin_dashboard_stats(
         vacant_rooms: total_rooms.0 - occupied_rooms.0,
         pending_payments: pending_payments.0,
         active_complaints: active_complaints.0,
+        overdue_payments: overdue_payments.0,
+        pending_maintenance: pending_maintenance.0,
+        visitors_checked_in: visitors_checked_in.0,
     };
+
+    // 2. Save to Redis (TTL 60s)
+    if let Ok(json) = serde_json::to_string(&stats) {
+        let _: Result<(), _> = conn.set_ex(cache_key, json, 60).await;
+    }
 
     Ok(Json(stats))
 }
@@ -82,6 +137,23 @@ pub async fn get_hosteler_dashboard(
 ) -> Result<Json<HostelerDashboardData>, (StatusCode, String)> {
     let uuid = Uuid::parse_str(&user_id)
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()))?;
+
+    let cache_key = format!("hosteler_dashboard:{}", user_id);
+    
+    // 1. Try to get from Redis
+    let mut conn = state.redis.get().await.map_err(|e| {
+        eprintln!("Redis connection error: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Cache error".to_string())
+    })?;
+
+    if let Ok(cached_data) = conn.get::<_, String>(&cache_key).await {
+        if let Ok(data) = serde_json::from_str::<HostelerDashboardData>(&cached_data) {
+            println!("✓ Hosteler dashboard cache hit for user {}", user_id);
+            return Ok(Json(data));
+        }
+    }
+
+    println!("Cache miss. Fetching hosteler dashboard from DB for user {}...", user_id);
 
     // Get user info
     let user: crate::models::User = sqlx::query_as(
@@ -95,7 +167,7 @@ pub async fn get_hosteler_dashboard(
     // Get room info if assigned
     let room_info: Option<Room> = if let Some(room_num) = &user.room_number {
         sqlx::query_as(
-            "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month::FLOAT8, status, created_at FROM rooms WHERE room_number = $1"
+            "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at FROM rooms WHERE room_number = $1"
         )
         .bind(room_num)
         .fetch_optional(&state.db)
@@ -110,7 +182,7 @@ pub async fn get_hosteler_dashboard(
 
     // Get fee status
     let fee_status: Vec<Fee> = sqlx::query_as(
-        "SELECT id, student_id, amount::FLOAT8, fee_type, due_date, status, payment_date, created_at FROM fees WHERE student_id = $1 ORDER BY created_at DESC LIMIT 5"
+        "SELECT id, student_id, amount::FLOAT8 AS amount, fee_type, due_date, status, payment_date, created_at FROM fees WHERE student_id = $1 ORDER BY created_at DESC LIMIT 5"
     )
     .bind(uuid)
     .fetch_all(&state.db)
@@ -122,7 +194,16 @@ pub async fn get_hosteler_dashboard(
 
     // Get recent complaints
     let recent_complaints: Vec<Complaint> = sqlx::query_as(
-        "SELECT id, student_id, title, description, status, priority, resolved_at, created_at FROM complaints WHERE student_id = $1 ORDER BY created_at DESC LIMIT 5"
+        r#"
+        SELECT 
+            c.id, c.student_id, u.name as student_name, u.room_number,
+            c.title, c.description, c.status, c.priority, c.resolved_at, c.created_at 
+        FROM complaints c
+        JOIN users u ON c.student_id = u.id
+        WHERE c.student_id = $1 
+        ORDER BY c.created_at DESC 
+        LIMIT 5
+        "#
     )
     .bind(uuid)
     .fetch_all(&state.db)
@@ -131,7 +212,7 @@ pub async fn get_hosteler_dashboard(
 
     // Get recent notices
     let recent_notices: Vec<Notice> = sqlx::query_as(
-        "SELECT id, title, content, priority, created_by, created_at FROM notices ORDER BY created_at DESC LIMIT 5"
+        "SELECT id, title, content, category, priority, created_by, created_at FROM notices ORDER BY created_at DESC LIMIT 5"
     )
     .fetch_all(&state.db)
     .await
@@ -154,6 +235,11 @@ pub async fn get_hosteler_dashboard(
         recent_notices,
     };
 
+    // 2. Save to Redis (TTL 60s)
+    if let Ok(json) = serde_json::to_string(&dashboard_data) {
+        let _: Result<(), _> = conn.set_ex(&cache_key, json, 60).await;
+    }
+
     Ok(Json(dashboard_data))
 }
 
@@ -174,7 +260,7 @@ pub async fn get_hosteler_room_info(
 
     if let Some(room_num) = &user.room_number {
         let room: Room = sqlx::query_as(
-            "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month::FLOAT8, status, created_at FROM rooms WHERE room_number = $1"
+            "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at FROM rooms WHERE room_number = $1"
         )
         .bind(room_num)
         .fetch_one(&state.db)

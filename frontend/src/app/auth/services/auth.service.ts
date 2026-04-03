@@ -14,6 +14,13 @@ export class AuthService {
     private currentUserSubject = new BehaviorSubject<User | null>(null);
     public currentUser$ = this.currentUserSubject.asObservable();
 
+    // Data Cache Subjects for instant UI population
+    private hostelerDashboardSubject = new BehaviorSubject<any>(null);
+    public hostelerDashboard$ = this.hostelerDashboardSubject.asObservable();
+    
+    private adminDashboardSubject = new BehaviorSubject<any>(null);
+    public adminDashboard$ = this.adminDashboardSubject.asObservable();
+
     constructor(private http: HttpClient, private router: Router) {
         this.restoreUser();
     }
@@ -51,6 +58,13 @@ export class AuthService {
         );
     }
 
+    updateProfile(params: Partial<User>): Observable<User> {
+        return this.http.put<User>(`/api/auth/profile`, params).pipe(
+            tap(user => this.setUser(user)),
+            catchError(this.handleError)
+        );
+    }
+
     getCurrentUser(): Observable<User> {
         return this.http.get<User>(`${this.apiUrl}/me`).pipe(
             tap(user => this.setUser(user)),
@@ -60,12 +74,14 @@ export class AuthService {
 
     getHostelerDashboardData(): Observable<any> {
         return this.http.get<any>(`/api/hosteler/dashboard`).pipe(
+            tap(data => this.hostelerDashboardSubject.next(data)),
             catchError(this.handleError)
         );
     }
 
     getAdminDashboardData(): Observable<any> {
         return this.http.get<any>(`/api/admin/dashboard/stats`).pipe(
+            tap(data => this.adminDashboardSubject.next(data)),
             catchError(this.handleError)
         );
     }

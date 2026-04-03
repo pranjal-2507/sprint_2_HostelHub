@@ -15,6 +15,10 @@ export class NoticeService {
         return this.http.post<Notice>('/api/admin/notices', notice);
     }
 
+    updateNotice(id: string, notice: Partial<Notice>): Observable<Notice> {
+        return this.http.put<Notice>(`/api/admin/notices/${id}`, notice);
+    }
+
     deleteNotice(id: string): Observable<void> {
         return this.http.delete<void>(`/api/admin/notices/${id}`);
     }

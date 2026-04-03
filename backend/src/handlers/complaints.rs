@@ -11,7 +11,14 @@ pub async fn get_all_complaints(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Complaint>>, (StatusCode, String)> {
     let complaints: Vec<Complaint> = sqlx::query_as(
-        "SELECT id, student_id, title, description, status, priority, resolved_at, created_at FROM complaints ORDER BY created_at DESC"
+        r#"
+        SELECT 
+            c.id, c.student_id, u.name as student_name, u.room_number,
+            c.title, c.description, c.status, c.priority, c.resolved_at, c.created_at 
+        FROM complaints c
+        JOIN users u ON c.student_id = u.id
+        ORDER BY c.created_at DESC
+        "#
     )
     .fetch_all(&state.db)
     .await
@@ -78,7 +85,14 @@ pub async fn create_complaint(
     match result {
         Ok(_) => {
             let complaint: Complaint = sqlx::query_as(
-                "SELECT id, student_id, title, description, status, priority, resolved_at, created_at FROM complaints WHERE id = $1"
+                r#"
+                SELECT 
+                    c.id, c.student_id, u.name as student_name, u.room_number,
+                    c.title, c.description, c.status, c.priority, c.resolved_at, c.created_at 
+                FROM complaints c
+                JOIN users u ON c.student_id = u.id
+                WHERE c.id = $1
+                "#
             )
             .bind(complaint_id)
             .fetch_one(&state.db)
@@ -101,7 +115,15 @@ pub async fn get_my_complaints(
         .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()))?;
 
     let complaints: Vec<Complaint> = sqlx::query_as(
-        "SELECT id, student_id, title, description, status, priority, resolved_at, created_at FROM complaints WHERE student_id = $1 ORDER BY created_at DESC"
+        r#"
+        SELECT 
+            c.id, c.student_id, u.name as student_name, u.room_number,
+            c.title, c.description, c.status, c.priority, c.resolved_at, c.created_at 
+        FROM complaints c
+        JOIN users u ON c.student_id = u.id
+        WHERE c.student_id = $1 
+        ORDER BY c.created_at DESC
+        "#
     )
     .bind(uuid)
     .fetch_all(&state.db)
@@ -117,7 +139,15 @@ pub async fn get_student_complaints(
     Path(student_id): Path<Uuid>,
 ) -> Result<Json<Vec<Complaint>>, (StatusCode, String)> {
     let complaints: Vec<Complaint> = sqlx::query_as(
-        "SELECT id, student_id, title, description, status, priority, resolved_at, created_at FROM complaints WHERE student_id = $1 ORDER BY created_at DESC"
+        r#"
+        SELECT 
+            c.id, c.student_id, u.name as student_name, u.room_number,
+            c.title, c.description, c.status, c.priority, c.resolved_at, c.created_at 
+        FROM complaints c
+        JOIN users u ON c.student_id = u.id
+        WHERE c.student_id = $1 
+        ORDER BY c.created_at DESC
+        "#
     )
     .bind(student_id)
     .fetch_all(&state.db)

@@ -11,26 +11,34 @@ use sqlx::postgres::PgPoolOptions;
 use std::env;
 use std::sync::Arc;
 use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::db::AppState;
+use deadpool_redis::{Config, Runtime};
 
 #[tokio::main]
 async fn main() {
     // Load variables from .env file
     dotenv().ok();
 
-    // Setup CORS to allow Angular frontend
-    let cors = CorsLayer::new()
-        .allow_origin(["http://localhost:4200".parse().unwrap()])
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
-        .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE]);
+    // Initialize tracing
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::new(
+            env::var("RUST_LOG").unwrap_or_else(|_| "hostelhub_backend=debug,tower_http=debug".into()),
+        ))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
+    // Setup CORS to allow any origin for development convenience
+    let cors = CorsLayer::permissive();
 
     // Database connection
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     println!("Connecting to database...");
     
     let pool = PgPoolOptions::new()
-        .max_connections(20) // Increased for stability
+        .max_connections(20)
         .acquire_timeout(std::time::Duration::from_secs(30))
         .connect_with(
             database_url.parse::<sqlx::postgres::PgConnectOptions>()
@@ -42,8 +50,19 @@ async fn main() {
 
     println!("✓ Database connected successfully (Pool size: 20)");
 
+    // Redis connection pool
+    let redis_url = env::var("REDIS_URL").expect("REDIS_URL must be set");
+    println!("Connecting to Redis...");
+    let redis_cfg = Config::from_url(redis_url);
+    let redis_pool = redis_cfg.create_pool(Some(Runtime::Tokio1))
+        .expect("Failed to create Redis pool");
+    println!("✓ Redis pool initialized");
+
     // Construct app state
-    let state = Arc::new(AppState { db: pool });
+    let state = Arc::new(AppState { 
+        db: pool,
+        redis: redis_pool
+    });
 
     // Establish table structure if not exists
     println!("Initializing database schema...");
@@ -219,18 +238,25 @@ async fn main() {
         println!("Warning: Database initialization step failed: {}", e);
     }
 
-    // Setup routes
-    let app = routes::create_router(state).layer(cors);
+    // Setup routes with tracing and CORS
+    let app = routes::create_router(state)
+        .layer(TraceLayer::new_for_http())
+        .layer(cors);
 
     // Get port from environment or default to 8080
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     let addr = format!("0.0.0.0:{}", port);
     
     // Bind server listener
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap_or_else(|e| {
-        panic!("Failed to bind to {} (Error: {}). Tip: Use 'Stop-Process -Id (Get-NetTCPConnection -LocalPort {}).OwningProcess -Force' on Windows to clear the port.", addr, e, port);
-    });
-
+    let listener = match tokio::net::TcpListener::bind(&addr).await {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("CRITICAL ERROR: Could not bind to {} - {}", addr, e);
+            eprintln!("Help: Check if another instance of the backend is already running.");
+            eprintln!("Tip: Use 'Stop-Process -Id (Get-NetTCPConnection -LocalPort {}).OwningProcess -Force' on Windows to clear the port.", port);
+            std::process::exit(1);
+        }
+    };
 
     println!("✓ Backend server listening on {}", addr);
 

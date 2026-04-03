@@ -15,8 +15,8 @@ import { SearchFilterComponent } from '../../../shared/components/search-filter/
 import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 import { RoomFormDialogComponent } from '../room-form-dialog/room-form-dialog.component';
-import { Room } from '../../../core/models';
-import { RoomService } from '../../../core/services';
+import { Room, Hostel } from '../../../core/models';
+import { RoomService, HostelService } from '../../../core/services';
 
 @Component({
   selector: 'app-room-list',
@@ -83,7 +83,7 @@ import { RoomService } from '../../../core/services';
               </td>
             </ng-container>
             <ng-container matColumnDef="price_per_month">
-              <th mat-header-cell *matHeaderCellDef mat-sort-header>Rent</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Price/Month</th>
               <td mat-cell *matCellDef="let room">₹{{ room.price_per_month | number }}</td>
             </ng-container>
             <ng-container matColumnDef="actions">
@@ -134,6 +134,7 @@ export class RoomListComponent implements OnInit, AfterViewInit {
 
   constructor(
     private roomService: RoomService,
+    private hostelService: HostelService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar,
     private cdr: ChangeDetectorRef
@@ -171,24 +172,34 @@ export class RoomListComponent implements OnInit, AfterViewInit {
   }
 
   filterByStatus(s: string): void {
-    this.fetchRooms(s || undefined);
+    this.dataSource.data = s ? this.allRooms.filter(r => r.status.toLowerCase() === s.toLowerCase()) : this.allRooms;
+    if (this.paginator) {
+      this.paginator.firstPage();
+    }
   }
 
   openAddDialog(): void {
-    const dialogRef = this.dialog.open(RoomFormDialogComponent, { width: '520px', data: {} });
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.roomService.create(result).subscribe({
-          next: () => {
-            this.fetchRooms();
-            this.snackBar.open('Room added successfully', 'Close', { duration: 3000 });
-          },
-          error: (err) => {
-            console.error('Error adding room', err);
-            this.snackBar.open('Failed to add room', 'Close', { duration: 3000 });
-          }
-        });
-      }
+    // We need a hostel_id to create a room. For simplicity in this demo,
+    // we'll fetch the first available hostel.
+    this.hostelService.getAll().subscribe(hostels => {
+      const hostelId = hostels.length > 0 ? hostels[0].id : undefined;
+      
+      const dialogRef = this.dialog.open(RoomFormDialogComponent, { width: '520px', data: {} });
+      dialogRef.afterClosed().subscribe(result => {
+        if (result) {
+          const payload = { ...result, hostel_id: hostelId };
+          this.roomService.create(payload).subscribe({
+            next: () => {
+              this.fetchRooms();
+              this.snackBar.open('Room added successfully', 'Close', { duration: 3000 });
+            },
+            error: (err) => {
+              console.error('Error adding room', err);
+              this.snackBar.open('Failed to add room', 'Close', { duration: 3000 });
+            }
+          });
+        }
+      });
     });
   }
 
@@ -196,8 +207,16 @@ export class RoomListComponent implements OnInit, AfterViewInit {
     const dialogRef = this.dialog.open(RoomFormDialogComponent, { width: '520px', data: { room } });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.fetchRooms();
-        this.snackBar.open('Room updated successfully', 'Close', { duration: 3000 });
+        this.roomService.update(room.id, result).subscribe({
+          next: () => {
+            this.fetchRooms();
+            this.snackBar.open('Room updated successfully', 'Close', { duration: 3000 });
+          },
+          error: (err) => {
+            console.error('Error updating room', err);
+            this.snackBar.open('Failed to update room', 'Close', { duration: 3000 });
+          }
+        });
       }
     });
   }

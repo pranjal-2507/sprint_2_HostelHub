@@ -38,8 +38,8 @@ import { Room } from '../../../core/models';
           <input matInput type="number" formControlName="capacity" />
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Rent / Month (₹)</mat-label>
-          <input matInput type="number" formControlName="rent" />
+          <mat-label>Price per Month (₹)</mat-label>
+          <input matInput type="number" formControlName="price_per_month" />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Status</mat-label>
@@ -80,7 +80,7 @@ export class RoomFormDialogComponent {
       floor: [data.room?.floor || 1, [Validators.required, Validators.min(1)]],
       room_type: [data.room?.room_type || 'double', Validators.required],
       capacity: [data.room?.capacity || 2, [Validators.required, Validators.min(1)]],
-      rent: [data.room?.rent || 5000, [Validators.required, Validators.min(0)]],
+      price_per_month: [data.room?.price_per_month || 5000, [Validators.required, Validators.min(0)]],
       status: [data.room?.status || 'available', Validators.required],
     });
   }

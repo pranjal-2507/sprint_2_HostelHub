@@ -4,7 +4,7 @@ use axum::{
 };
 use std::sync::Arc;
 
-use crate::auth::handlers::{login, me, register};
+use crate::auth::handlers::{login, me, register, update_profile};
 use crate::handlers::{dashboard, students, fees, complaints, notices, room, maintenance, hostel, visitor};
 use crate::db::AppState;
 
@@ -14,6 +14,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/auth/register", post(register))
         .route("/auth/login", post(login))
         .route("/auth/me", get(me))
+        .route("/api/auth/profile", put(update_profile))
 
         // Dashboard routes
         .route("/api/admin/dashboard/stats", get(dashboard::get_admin_dashboard_stats))
@@ -23,6 +24,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         // Room management routes
         .route("/api/admin/rooms", get(room::get_all_rooms))
         .route("/api/admin/rooms", post(room::create_room))
+        .route("/api/admin/rooms/:room_id", put(room::update_room))
         .route("/api/admin/rooms/:room_id", delete(room::delete_room))
         .route("/api/rooms", get(room::get_rooms))
         
@@ -50,6 +52,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         // Notice management routes
         .route("/api/notices", get(notices::get_all_notices))
         .route("/api/admin/notices", post(notices::create_notice))
+        .route("/api/admin/notices/:notice_id", put(notices::update_notice))
         .route("/api/admin/notices/:notice_id", delete(notices::delete_notice))
         
         // Other management routes
