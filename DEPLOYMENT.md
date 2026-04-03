@@ -29,7 +29,7 @@ Render is chosen for its native Docker support and high stability for Rust.
     - `JWT_SECRET`: A long random string (e.g., `openssl rand -base64 32`).
     - `REDIS_URL`: Your Upstash Redis connection string.
     - `PORT`: `8080` (Render will manage this automatically).
-5.  **Deploy**: Render will build the Docker container and provide a URL (e.g., `https://hostelhub-backend.onrender.com`).
+5.  **Deploy**: Render will build the Docker container and provide a URL (e.g., `https://hostelhub-backend-0kx0.onrender.com`).
 
 ---
 
@@ -51,7 +51,7 @@ Vercel is the gold standard for Angular deployments.
 ## 4. Connecting the Two
 1.  **Update Vercel Configuration**: 
     - In your `frontend/vercel.json`, I've already added a rewrite rule.
-    - Ensure the `destination` URL in `vercel.json` matches your **Render** backend URL.
+    - Ensure the `destination` URL in `vercel.json` matches your **Render** backend URL (`https://hostelhub-backend-0kx0.onrender.com`).
     - If you change the backend location, simply update `vercel.json` and push to GitHub.
 
 ---
