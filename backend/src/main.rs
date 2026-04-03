@@ -227,18 +227,6 @@ async fn main() {
     let addr = format!("0.0.0.0:{}", port);
     
     // Bind server listener
-
-    let addr = "0.0.0.0:8080";
-    let listener = match tokio::net::TcpListener::bind(addr).await {
-        Ok(l) => l,
-        Err(e) => {
-            eprintln!("CRITICAL ERROR: Could not bind to {} - {}", addr, e);
-            eprintln!("Help: Check if another instance of the backend is already running.");
-            eprintln!("Try killing existing processes: taskkill /F /IM hostelhub_backend.exe /T");
-            std::process::exit(1);
-        }
-    };
-
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap_or_else(|e| {
         panic!("Failed to bind to {} (Error: {}). Tip: Use 'Stop-Process -Id (Get-NetTCPConnection -LocalPort {}).OwningProcess -Force' on Windows to clear the port.", addr, e, port);
     });
