@@ -31,6 +31,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         // Student management routes (Admin only)
         .route("/api/admin/students", get(students::get_all_students))
         .route("/api/admin/students/:student_id", get(students::get_student_by_id))
+        .route("/api/admin/students/:student_id", put(students::update_student))
         .route("/api/admin/students/:student_id/assign-room/:room_number", put(students::assign_room))
         .route("/api/admin/students/:student_id", delete(students::remove_student))
         
@@ -48,6 +49,8 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/admin/students/:student_id/complaints", get(complaints::get_student_complaints))
         .route("/api/hosteler/complaints", get(complaints::get_my_complaints))
         .route("/api/hosteler/complaints", post(complaints::create_complaint))
+        .route("/api/hosteler/complaints/:complaint_id", put(complaints::update_my_complaint))
+        .route("/api/hosteler/complaints/:complaint_id", delete(complaints::delete_my_complaint))
         
         // Notice management routes
         .route("/api/notices", get(notices::get_all_notices))

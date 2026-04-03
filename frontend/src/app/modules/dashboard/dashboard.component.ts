@@ -27,7 +27,7 @@ interface DashboardStats {
     <div class="dashboard-container">
       <div class="welcome-banner glass-card premium-gradient">
         <div class="banner-content">
-          <h1 class="page-title">Welcome back, Admin 👋</h1>
+          <h1 class="page-title">Welcome back, Admin!</h1>
           <p class="page-subtitle">Here is what's happening with HostelHub today.</p>
         </div>
       </div>
@@ -211,6 +211,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
       ...card,
       value: (stats as any)[card.key] || 0
     }));
+
+    this.roomData = [
+      { name: 'Occupied', value: stats.occupied_rooms || 0 },
+      { name: 'Vacant', value: stats.vacant_rooms || 0 }
+    ];
+
+    this.operationsData = [
+      { name: 'Students', value: stats.total_students || 0 },
+      { name: 'Payments', value: stats.pending_payments || 0 },
+      { name: 'Complaints', value: stats.active_complaints || 0 }
+    ];
+
     this.cdr.detectChanges();
   }
 

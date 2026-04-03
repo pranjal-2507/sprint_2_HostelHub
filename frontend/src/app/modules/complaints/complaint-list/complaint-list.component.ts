@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ViewChild, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
@@ -131,7 +131,7 @@ import { Complaint } from '../../../core/models';
     @media (max-width: 768px) { .page-header { flex-direction: column; gap: 12px; align-items: stretch; } }
   `],
 })
-export class ComplaintListComponent implements OnInit {
+export class ComplaintListComponent implements OnInit, AfterViewInit {
   displayedColumns = ['studentName', 'roomNumber', 'title', 'priority', 'status', 'createdAt', 'actions'];
   dataSource = new MatTableDataSource<any>();
   @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -151,14 +151,18 @@ export class ComplaintListComponent implements OnInit {
     this.fetchComplaints();
   }
 
+  ngAfterViewInit(): void {
+    this.dataSource.paginator = this.paginator;
+    this.dataSource.sort = this.sort;
+    this.cdr.detectChanges();
+  }
+
   fetchComplaints(): void {
     this.loading = true;
     this.complaintService.getAll().subscribe({
       next: (data) => {
         this.allComplaints = data;
         this.dataSource.data = data;
-        this.dataSource.paginator = this.paginator;
-        this.dataSource.sort = this.sort;
         this.loading = false;
         this.cdr.detectChanges();
       },

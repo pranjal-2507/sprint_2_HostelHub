@@ -140,7 +140,7 @@ import { RoomService } from '../../../core/services/room.service';
     </div>
   `,
   styles: [`
-    .my-room { max-width: 1200px; padding: 0 16px; }
+    .my-room { max-width: 1200px; padding: 0 16px; margin: 0 auto; }
     .page-title { font-size: 22px; font-weight: 600; color: var(--text-main); margin: 0 0 24px; }
     .loading-state { text-align: center; padding: 40px; color: var(--text-muted); }
     .room-cards { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }

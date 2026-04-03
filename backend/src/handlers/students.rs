@@ -136,3 +136,82 @@ pub async fn get_student_by_id(
         room_number: user.room_number,
     }))
 }
+
+pub async fn update_student(
+    RequireAdmin(_user_id): RequireAdmin,
+    State(state): State<Arc<AppState>>,
+    Path(student_id): Path<Uuid>,
+    Json(update): Json<UserResponse>,
+) -> Result<Json<UserResponse>, (StatusCode, String)> {
+    // 1. Get current student data to check for room change
+    let current: User = sqlx::query_as(
+        "SELECT id, name, email, password_hash, role, phone, course, year, room_number, created_at FROM users WHERE id = $1 AND role = 'hosteler'"
+    )
+    .bind(student_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|_| (StatusCode::NOT_FOUND, "Student not found".to_string()))?;
+
+    // 2. Handle room occupancy changes if room_number is different
+    if current.room_number != update.room_number {
+        // Decrease old room occupancy if it existed
+        if let Some(old_room) = &current.room_number {
+            let _ = sqlx::query("UPDATE rooms SET occupancy = GREATEST(0, occupancy - 1) WHERE room_number = $1")
+                .bind(old_room)
+                .execute(&state.db)
+                .await;
+        }
+
+        // Increase new room occupancy if it exists and has space
+        if let Some(new_room) = &update.room_number {
+            let room_exists = sqlx::query("SELECT 1 FROM rooms WHERE room_number = $1 AND occupancy < capacity")
+                .bind(new_room)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error checking room".to_string()))?;
+
+            if room_exists.is_none() {
+                return Err((StatusCode::BAD_REQUEST, "Target room is full or does not exist".to_string()));
+            }
+
+            let _ = sqlx::query("UPDATE rooms SET occupancy = occupancy + 1 WHERE room_number = $1")
+                .bind(new_room)
+                .execute(&state.db)
+                .await;
+        }
+    }
+
+    // 3. Update the student record
+    let updated: User = sqlx::query_as(
+        r#"
+        UPDATE users 
+        SET name = $1, email = $2, phone = $3, course = $4, year = $5, room_number = $6
+        WHERE id = $7 AND role = 'hosteler'
+        RETURNING id, name, email, password_hash, role, phone, course, year, room_number, created_at
+        "#
+    )
+    .bind(&update.name)
+    .bind(&update.email)
+    .bind(&update.phone)
+    .bind(&update.course)
+    .bind(update.year)
+    .bind(&update.room_number)
+    .bind(student_id)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Update student error: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update student".to_string())
+    })?;
+
+    Ok(Json(UserResponse {
+        id: updated.id,
+        name: updated.name,
+        email: updated.email,
+        role: updated.role,
+        phone: updated.phone,
+        course: updated.course,
+        year: updated.year,
+        room_number: updated.room_number,
+    }))
+}

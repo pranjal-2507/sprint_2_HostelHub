@@ -61,8 +61,19 @@ async fn main() {
     // Construct app state
     let state = Arc::new(AppState { 
         db: pool,
-        redis: redis_pool
+        redis: redis_pool.clone()
     });
+
+    // Verify Redis connectivity early
+    println!("Checking Redis connection...");
+    match redis_pool.get().await {
+        Ok(_) => println!("✓ Redis connection verified"),
+        Err(e) => {
+            eprintln!("Warning: Redis connection check failed: {}. Ensure Redis is running.", e);
+            // We don't exit here to allow the app to run without Redis if needed, 
+            // but handlers using Redis will fail.
+        }
+    }
 
     // Establish table structure if not exists
     println!("Initializing database schema...");

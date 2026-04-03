@@ -29,7 +29,9 @@ import { NavbarComponent } from '../navbar/navbar.component';
     .sidenav-container { flex: 1; background: transparent; padding: 16px; overflow: hidden; }
     .sidenav { width: 260px; background: transparent; border: none; margin-right: 24px; border-radius: 24px; overflow: hidden; }
     .main-content { background: transparent; border-radius: 24px; overflow-y: auto; }
-    .content-wrapper { padding: 8px 16px; min-height: calc(100vh - 100px); }
+    .content-wrapper { padding: 8px 16px; min-height: calc(100vh - 100px); display: flex; flex-direction: column; align-items: center; }
+    ::ng-deep .content-wrapper > :not(router-outlet) { width: 100%; display: block; }
+    ::ng-deep .content-wrapper > :not(router-outlet) > div { margin: 0 auto; }
     @media (max-width: 768px) { .sidenav-container { padding: 8px; } .sidenav { margin-right: 0; } .content-wrapper { padding: 8px; } }
   `],
 })
