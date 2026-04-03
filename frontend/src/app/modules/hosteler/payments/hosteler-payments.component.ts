@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -175,7 +175,7 @@ import { Fee } from '../../../core/models';
     </div>
   `,
   styles: [`
-    .payments { max-width: 1200px; padding: 0 16px; }
+    .payments { max-width: 1200px; padding: 0 16px; margin: 0 auto; }
     .page-title { font-size: 22px; font-weight: 600; color: var(--text-main); margin: 0 0 24px; }
     
     .loading-state { text-align: center; padding: 40px; color: var(--text-muted); }
@@ -272,6 +272,7 @@ export class HostelerPaymentsComponent implements OnInit {
   loading = true;
 
   private feeService = inject(FeeService);
+  private cdr = inject(ChangeDetectorRef);
 
   ngOnInit() {
     this.fetchFees();
@@ -285,10 +286,12 @@ export class HostelerPaymentsComponent implements OnInit {
         this.pendingFees = fees.filter(f => f.status === 'pending' || f.status === 'overdue');
         this.paidFees = fees.filter(f => f.status === 'paid');
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error fetching fees', err);
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }

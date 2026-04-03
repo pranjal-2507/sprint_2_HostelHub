@@ -159,6 +159,13 @@ pub struct UpdateComplaintRequest {
     pub status: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct HostelerUpdateComplaintRequest {
+    pub title: String,
+    pub description: String,
+    pub priority: String,
+}
+
 // Notice Management Models
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Notice {

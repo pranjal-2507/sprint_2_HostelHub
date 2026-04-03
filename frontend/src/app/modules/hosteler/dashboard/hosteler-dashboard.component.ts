@@ -65,7 +65,7 @@ interface HostelerDashboardData {
     <div class="dashboard-container">
       <div class="welcome-banner glass-card premium-gradient">
         <div class="welcome-text">
-          <h1>Welcome back, {{ dashboardData?.user?.name || authService.currentUserValue?.name }} 👋</h1>
+          <h1>Welcome back, {{ dashboardData?.user?.name || authService.currentUserValue?.name }}!</h1>
           <p>Here's what's happening with your stay at HostelHub.</p>
         </div>
         <div class="welcome-stats">
@@ -221,7 +221,7 @@ interface HostelerDashboardData {
     </div>
   `,
   styles: [`
-    .dashboard-container { display: flex; flex-direction: column; gap: 24px; animation: fadeIn 0.5s ease-out; max-width: 1200px; padding: 0 16px 40px; }
+    .dashboard-container { display: flex; flex-direction: column; gap: 24px; animation: fadeIn 0.5s ease-out; max-width: 1200px; padding: 0 16px 40px; margin: 0 auto; }
     
     .welcome-banner {
       padding: 32px 40px; border-radius: 24px !important; color: #fff;

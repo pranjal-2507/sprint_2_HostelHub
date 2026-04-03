@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -163,7 +163,7 @@ import { NoticeService } from '../../../core/services/notice.service';
     </div>
   `,
   styles: [`
-    .notices { max-width: 1200px; padding: 0 16px; }
+    .notices { max-width: 1200px; padding: 0 16px; margin: 0 auto; }
     .page-title { font-size: 22px; font-weight: 600; color: var(--text-main); margin: 0 0 24px; }
     .loading-state { text-align: center; padding: 40px; color: var(--text-muted); }
     .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -203,6 +203,7 @@ export class HostelerNoticesComponent implements OnInit {
   notices: any[] = [];
   loading = true;
   private noticeService = inject(NoticeService);
+  private cdr = inject(ChangeDetectorRef);
 
   ngOnInit() {
     this.loadNotices();
@@ -214,10 +215,12 @@ export class HostelerNoticesComponent implements OnInit {
       next: (data) => {
         this.notices = data;
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading notices', err);
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }

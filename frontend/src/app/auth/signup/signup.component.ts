@@ -38,7 +38,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
         <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="auth-form">
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Full Name</mat-label>
-            <input matInput formControlName="name" placeholder="Rahul Sharma" />
+            <input matInput formControlName="name" placeholder="Enter your full name" />
             <mat-error *ngIf="signupForm.get('name')?.hasError('required')">Name is required</mat-error>
           </mat-form-field>
 

@@ -175,6 +175,7 @@ export class FeeDashboardComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
+    this.cdr.detectChanges();
   }
 
   fetchFees(): void {

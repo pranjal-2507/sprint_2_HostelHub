@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialogModule, MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
@@ -19,12 +19,10 @@ import { Complaint } from '../../../core/models';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule],
   template: `
-    <div class="dialog-header">
-      <h2 mat-dialog-title>
-        <mat-icon>add</mat-icon>
-        Raise New Complaint
-      </h2>
-    </div>
+    <h2 mat-dialog-title class="dialog-header">
+      <mat-icon>{{ isEdit ? 'edit' : 'add' }}</mat-icon>
+      {{ isEdit ? 'Edit Complaint' : 'Raise New Complaint' }}
+    </h2>
     <mat-dialog-content class="dialog-content">
       <form [formGroup]="complaintForm" class="complaint-form">
         <mat-form-field appearance="outline">
@@ -56,32 +54,42 @@ import { Complaint } from '../../../core/models';
     </mat-dialog-content>
     <mat-dialog-actions class="dialog-actions">
       <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-raised-button color="primary" (click)="submitComplaint()" [disabled]="complaintForm.invalid || loading">
-        <mat-icon>send</mat-icon>
-        {{ loading ? 'Submitting...' : 'Submit Complaint' }}
+      <button mat-raised-button color="primary" class="submit-btn" (click)="submitComplaint()" [disabled]="complaintForm.invalid || loading">
+        <mat-icon>{{ isEdit ? 'save' : 'send' }}</mat-icon>
+        {{ loading ? (isEdit ? 'Saving...' : 'Submitting...') : (isEdit ? 'Save Changes' : 'Submit Complaint') }}
       </button>
     </mat-dialog-actions>
   `,
   styles: [`
-    .dialog-header h2 {
-      display: flex; align-items: center; gap: 8px; margin: 0;
-      mat-icon { color: #059669; }
+    .dialog-header {
+      display: flex; align-items: center; gap: 10px; margin: 0; padding: 24px 24px 16px;
+      font-size: 20px; font-weight: 600; color: var(--text-heading);
+      border-bottom: 1px solid var(--border-color);
+      mat-icon { color: #059669; font-size: 24px; width: 24px; height: 24px; }
     }
-    .dialog-content { padding: 20px 0; }
+    .dialog-content { padding: 24px !important; }
     .complaint-form {
       display: flex; flex-direction: column; gap: 16px; min-width: 400px;
     }
     .dialog-actions {
-      padding: 16px 0 0; justify-content: flex-end; gap: 8px;
-      button { display: flex; align-items: center; gap: 4px; }
+      padding: 16px 24px 24px !important; justify-content: flex-end; gap: 12px;
+      border-top: 1px solid var(--border-color);
+      button { display: flex; align-items: center; gap: 6px; border-radius: 8px; padding: 0 20px; }
+      .submit-btn { background: #059669; color: white; border-radius: 8px; }
+      .submit-btn:disabled { background: #94a3b8; }
+    }
+    @media (max-width: 500px) {
+      .complaint-form { min-width: unset; width: 100%; }
     }
   `]
 })
-export class NewComplaintDialogComponent {
+export class NewComplaintDialogComponent implements OnInit {
   complaintForm: FormGroup;
   loading = false;
+  isEdit = false;
   private complaintService = inject(ComplaintService);
   private dialogRef = inject(MatDialogRef<NewComplaintDialogComponent>);
+  public data = inject(MAT_DIALOG_DATA, { optional: true });
 
   constructor(private fb: FormBuilder) {
     this.complaintForm = this.fb.group({
@@ -91,20 +99,45 @@ export class NewComplaintDialogComponent {
     });
   }
 
+  ngOnInit() {
+    if (this.data && this.data.id) {
+      this.isEdit = true;
+      this.complaintForm.patchValue({
+        title: this.data.title,
+        description: this.data.description,
+        priority: this.data.priority
+      });
+    }
+  }
+
   submitComplaint() {
     if (this.complaintForm.valid) {
       this.loading = true;
-      this.complaintService.createComplaint(this.complaintForm.value).subscribe({
-        next: (res) => {
-          this.loading = false;
-          this.dialogRef.close(true);
-        },
-        error: (err) => {
-          console.error('Error submitting complaint', err);
-          this.loading = false;
-          alert('Failed to submit complaint. Please try again.');
-        }
-      });
+      if (this.isEdit) {
+        this.complaintService.updateComplaint(this.data.id, this.complaintForm.value).subscribe({
+          next: () => {
+            this.loading = false;
+            this.dialogRef.close(true);
+          },
+          error: (err) => {
+            console.error('Error updating complaint', err);
+            this.loading = false;
+            alert('Failed to update complaint.');
+          }
+        });
+      } else {
+        this.complaintService.createComplaint(this.complaintForm.value).subscribe({
+          next: () => {
+            this.loading = false;
+            this.dialogRef.close(true);
+          },
+          error: (err) => {
+            console.error('Error submitting complaint', err);
+            this.loading = false;
+            alert('Failed to submit complaint. Please try again.');
+          }
+        });
+      }
     }
   }
 }
@@ -215,16 +248,26 @@ export class NewComplaintDialogComponent {
                       <mat-icon>tag</mat-icon>
                       <span>ID: {{ complaint.id.substring(0, 8) }}</span>
                     </div>
+                    @if (complaint.status === 'pending') {
+                      <div class="complaint-actions">
+                        <button mat-icon-button class="action-btn edit-btn" (click)="editComplaint(complaint)" title="Edit">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                        <button mat-icon-button class="action-btn delete-btn" color="warn" (click)="deleteComplaint(complaint.id)" title="Delete">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    }
                   </div>
                 </div>
               }
             </div>
           } @else {
             <div class="empty-state">
-              <mat-icon>report</mat-icon>
+              <mat-icon class="status-icon">report</mat-icon>
               <h3>No Complaints Found</h3>
               <p>You haven't raised any complaints yet.</p>
-              <button mat-raised-button color="primary" (click)="openNewComplaintDialog()">
+              <button mat-raised-button color="primary" class="raise-btn" (click)="openNewComplaintDialog()">
                 <mat-icon>add</mat-icon>
                 Raise Your First Complaint
               </button>
@@ -235,7 +278,7 @@ export class NewComplaintDialogComponent {
     </div>
   `,
   styles: [`
-    .complaints { max-width: 1200px; padding: 0 16px; }
+    .complaints { max-width: 1200px; padding: 0 16px; margin: 0 auto; }
     .page-header {
       display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;
     }
@@ -310,6 +353,14 @@ export class NewComplaintDialogComponent {
       display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-muted);
       mat-icon { font-size: 14px; width: 14px; height: 14px; }
     }
+    .complaint-actions { display: flex; gap: 8px; }
+    .action-btn { 
+      transform: scale(0.9); transition: all 0.2s ease;
+      background: rgba(var(--card-bg-rgb), 0.5);
+    }
+    .action-btn:hover { background: var(--surface-2); transform: scale(1); }
+    .edit-btn { color: #0284c7; }
+    .delete-btn { color: #dc2626; }
     
     .priority-high { background: var(--badge-danger-bg); color: var(--badge-danger-text); }
     .priority-medium { background: var(--badge-warning-bg); color: var(--badge-warning-text); }
@@ -317,10 +368,14 @@ export class NewComplaintDialogComponent {
     
     .empty-state {
       text-align: center; padding: 60px 20px; color: #94a3b8;
-      mat-icon { font-size: 64px; width: 64px; height: 64px; margin-bottom: 16px; }
-      h3 { font-size: 18px; color: var(--text-main); margin: 0 0 8px; }
-      p { margin: 0 0 24px; font-size: 14px; color: var(--text-muted); }
-      button { display: flex; align-items: center; gap: 8px; margin: 0 auto; }
+      .status-icon { font-size: 64px; width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.5; }
+      h3 { font-size: 20px; font-weight: 700; color: var(--text-main); margin: 0 0 8px; }
+      p { margin: 0 0 24px; font-size: 15px; color: var(--text-muted); }
+      .raise-btn {
+        display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px;
+        height: auto; line-height: 1; border-radius: 12px;
+        mat-icon { font-size: 20px; width: 20px; height: 20px; margin: 0; }
+      }
     }
     
     @media (max-width: 1024px) {
@@ -339,6 +394,7 @@ export class HostelerComplaintsComponent implements OnInit {
   loading = true;
   private complaintService = inject(ComplaintService);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   ngOnInit() {
     this.fetchComplaints();
@@ -350,10 +406,12 @@ export class HostelerComplaintsComponent implements OnInit {
       next: (data) => {
         this.complaints = data;
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error fetching complaints', err);
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -381,5 +439,29 @@ export class HostelerComplaintsComponent implements OnInit {
         this.fetchComplaints();
       }
     });
+  }
+
+  editComplaint(complaint: Complaint) {
+    const dialogRef = this.dialog.open(NewComplaintDialogComponent, {
+      width: '500px',
+      disableClose: true,
+      data: complaint
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) this.fetchComplaints();
+    });
+  }
+
+  deleteComplaint(id: string) {
+    if (confirm('Are you sure you want to delete this complaint? This action cannot be undone.')) {
+      this.complaintService.deleteComplaint(id).subscribe({
+        next: () => this.fetchComplaints(),
+        error: (err) => {
+          console.error('Error deleting complaint', err);
+          alert('Failed to delete complaint. Please try again.');
+        }
+      });
+    }
   }
 }

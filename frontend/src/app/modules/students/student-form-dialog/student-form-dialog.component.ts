@@ -61,9 +61,9 @@ import { Student } from '../../../core/models';
   styles: [`
     .form-grid {
       display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px;
-      min-width: 400px;
+      min-width: 400px; padding-top: 16px;
     }
-    .primary-btn { background: #4f46e5 !important; color: #fff !important; border-radius: 8px !important; }
+    .primary-btn { background: var(--primary-accent) !important; color: #fff !important; border-radius: 12px !important; }
   `],
 })
 export class StudentFormDialogComponent {

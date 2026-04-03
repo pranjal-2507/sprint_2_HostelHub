@@ -61,8 +61,19 @@ async fn main() {
     // Construct app state
     let state = Arc::new(AppState { 
         db: pool,
-        redis: redis_pool
+        redis: redis_pool.clone()
     });
+
+    // Verify Redis connectivity early
+    println!("Checking Redis connection...");
+    match redis_pool.get().await {
+        Ok(_) => println!("✓ Redis connection verified"),
+        Err(e) => {
+            eprintln!("Warning: Redis connection check failed: {}. Ensure Redis is running.", e);
+            // We don't exit here to allow the app to run without Redis if needed, 
+            // but handlers using Redis will fail.
+        }
+    }
 
     // Establish table structure if not exists
     println!("Initializing database schema...");
@@ -253,9 +264,11 @@ async fn main() {
         Err(e) => {
             eprintln!("CRITICAL ERROR: Could not bind to {} - {}", addr, e);
             eprintln!("Help: Check if another instance of the backend is already running.");
+            eprintln!("Tip: Use 'Stop-Process -Id (Get-NetTCPConnection -LocalPort {}).OwningProcess -Force' on Windows to clear the port.", port);
             std::process::exit(1);
         }
     };
+
     println!("✓ Backend server listening on {}", addr);
 
     if let Err(e) = axum::serve(listener, app).await {

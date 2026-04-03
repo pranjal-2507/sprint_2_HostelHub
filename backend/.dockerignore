@@ -1,0 +1,8 @@
+target/
+.env
+.git/
+.gitignore
+*.log
+cargo_check_error.txt
+Dockerfile
+README.md

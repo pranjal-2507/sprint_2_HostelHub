@@ -306,7 +306,7 @@ import { ThemeService } from '../../../shared/services/theme.service';
     </div>
   `,
   styles: [`
-    .profile { max-width: 1200px; padding: 0 16px; }
+    .profile { max-width: 1200px; padding: 0 16px; margin: 0 auto; }
     .page-title { font-size: 22px; font-weight: 600; color: var(--text-main); margin: 0 0 24px; }
     
     .profile-tabs { margin-bottom: 16px; }

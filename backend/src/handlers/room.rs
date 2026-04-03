@@ -5,6 +5,7 @@ use axum::{
 };
 use std::sync::Arc;
 use uuid::Uuid;
+use sqlx::Postgres;
 
 use crate::auth::middleware::RequireAdmin;
 use crate::db::AppState;
@@ -14,7 +15,7 @@ pub async fn get_all_rooms(
     _admin: RequireAdmin,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Room>>, (StatusCode, String)> {
-    let rooms = sqlx::query_as::<_, Room>(
+    let rooms = sqlx::query_as::<Postgres, Room>(
         "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at 
          FROM rooms 
          ORDER BY room_number"
@@ -29,7 +30,7 @@ pub async fn get_all_rooms(
 pub async fn get_rooms(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Room>>, (StatusCode, String)> {
-    let rooms = sqlx::query_as::<_, Room>(
+    let rooms = sqlx::query_as::<Postgres, Room>(
         "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at 
          FROM rooms 
          WHERE status = 'available' 
@@ -46,7 +47,7 @@ pub async fn get_room_by_id(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Room>, (StatusCode, String)> {
-    let room = sqlx::query_as::<_, Room>(
+    let room = sqlx::query_as::<Postgres, Room>(
         "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at 
          FROM rooms 
          WHERE id = $1"
@@ -65,7 +66,7 @@ pub async fn create_room(
     Json(payload): Json<CreateRoomRequest>,
 ) -> Result<(StatusCode, Json<Room>), (StatusCode, String)> {
     let room_id = Uuid::new_v4();
-    let room = sqlx::query_as::<_, Room>(
+    let room = sqlx::query_as::<Postgres, Room>(
         "INSERT INTO rooms (id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month, created_at) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) 
          RETURNING id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at"
@@ -111,7 +112,7 @@ pub async fn update_room(
     Json(payload): Json<UpdateRoomRequest>,
 ) -> Result<Json<Room>, (StatusCode, String)> {
     // Current room for fallback
-    let current_room = sqlx::query_as::<_, Room>(
+    let current_room = sqlx::query_as::<Postgres, Room>(
         "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at 
          FROM rooms 
          WHERE id = $1"
@@ -121,7 +122,7 @@ pub async fn update_room(
     .await
     .map_err(|e| (StatusCode::NOT_FOUND, format!("Room not found: {}", e)))?;
 
-    let room = sqlx::query_as::<_, Room>(
+    let room = sqlx::query_as::<Postgres, Room>(
         "UPDATE rooms 
          SET room_number = $1, floor = $2, capacity = $3, room_type = $4, status = $5, price_per_month = $6 
          WHERE id = $7 

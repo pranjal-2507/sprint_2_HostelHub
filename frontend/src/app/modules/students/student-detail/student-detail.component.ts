@@ -219,39 +219,49 @@ export class StudentDetailComponent implements OnInit {
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
+    console.log('Student Detail OnInit - ID:', id);
     if (id) {
       this.fetchData(id);
+    } else {
+      this.loading = false;
+      this.snackBar.open('No student ID provided', 'Close', { duration: 3000 });
     }
   }
 
   fetchData(id: string): void {
     this.loading = true;
+    console.log('Fetching student data for ID:', id);
     this.studentService.getById(id).subscribe({
       next: (val) => {
+        console.log('Student found:', val);
         this.student = val;
+        this.loading = false;
         this.fetchRelatedData(id);
       },
       error: (err) => {
-        console.error('Error fetching student', err);
-        this.snackBar.open('Failed to load student profile', 'Close', { duration: 3000 });
+        console.error('Error fetching student details:', err);
+        this.snackBar.open('Failed to load student profile - ' + (err.error || 'Not Found'), 'Close', { duration: 5000 });
         this.loading = false;
       }
     });
   }
 
   fetchRelatedData(id: string): void {
-    // Parallel fetch for fees and complaints
+    console.log('Fetching related data (fees/complaints) for:', id);
     this.studentService.getFees(id).subscribe({
-      next: (f) => this.fees = f,
-      error: (e) => console.error('Error fetching fees', e)
+      next: (f) => {
+        console.log('Fees loaded:', f.length);
+        this.fees = f;
+      },
+      error: (e) => console.error('Error fetching fees:', e)
     });
 
     this.studentService.getComplaints(id).subscribe({
-      next: (c) => this.complaints = c,
-      error: (e) => console.error('Error fetching complaints', e),
-      complete: () => {
-        this.loading = false;
-      }
+      next: (c) => {
+        console.log('Complaints loaded:', c.length);
+        this.complaints = c;
+      },
+      error: (e) => console.error('Error fetching complaints:', e)
     });
   }
 }

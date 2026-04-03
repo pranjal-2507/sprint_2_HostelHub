@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::auth::middleware::{RequireAdmin, RequireAuth};
 use crate::db::AppState;
-use crate::models::{Complaint, CreateComplaintRequest, UpdateComplaintRequest};
+use crate::models::{Complaint, CreateComplaintRequest, UpdateComplaintRequest, HostelerUpdateComplaintRequest};
 
 pub async fn get_all_complaints(
     RequireAdmin(_user_id): RequireAdmin,
@@ -155,4 +155,68 @@ pub async fn get_student_complaints(
     .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
 
     Ok(Json(complaints))
+}
+
+pub async fn update_my_complaint(
+    RequireAuth(user_id): RequireAuth,
+    State(state): State<Arc<AppState>>,
+    Path(id_str): Path<String>,
+    Json(payload): Json<HostelerUpdateComplaintRequest>,
+) -> Result<Json<&'static str>, (StatusCode, String)> {
+    let student_uuid = Uuid::parse_str(&user_id)
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()))?;
+
+    // Try to parse as full UUID first, otherwise match as a prefix string
+    // (This handles the 8-character IDs shown in the frontend)
+    let result = sqlx::query(
+        r#"
+        UPDATE complaints 
+        SET title = $1, description = $2, priority = $3 
+        WHERE (id::text LIKE $4 || '%') AND student_id = $5 AND status = 'pending'
+        "#
+    )
+    .bind(&payload.title)
+    .bind(&payload.description)
+    .bind(&payload.priority)
+    .bind(&id_str)
+    .bind(student_uuid)
+    .execute(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Error updating complaint: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
+
+    if result.rows_affected() == 0 {
+        Err((StatusCode::NOT_FOUND, "Complaint not found, or it is no longer pending and cannot be edited".to_string()))
+    } else {
+        Ok(Json("Complaint updated successfully"))
+    }
+}
+
+pub async fn delete_my_complaint(
+    RequireAuth(user_id): RequireAuth,
+    State(state): State<Arc<AppState>>,
+    Path(id_str): Path<String>,
+) -> Result<Json<&'static str>, (StatusCode, String)> {
+    let student_uuid = Uuid::parse_str(&user_id)
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid UUID".to_string()))?;
+
+    let result = sqlx::query(
+        "DELETE FROM complaints WHERE (id::text LIKE $1 || '%') AND student_id = $2 AND status = 'pending'"
+    )
+    .bind(&id_str)
+    .bind(student_uuid)
+    .execute(&state.db)
+    .await
+    .map_err(|e| {
+        eprintln!("Error deleting complaint: {:?}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
+
+    if result.rows_affected() == 0 {
+        Err((StatusCode::NOT_FOUND, "Complaint not found, or it is no longer pending and cannot be deleted".to_string()))
+    } else {
+        Ok(Json("Complaint deleted successfully"))
+    }
 }

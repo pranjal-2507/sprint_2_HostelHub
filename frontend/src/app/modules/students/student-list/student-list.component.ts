@@ -179,24 +179,34 @@ export class StudentListComponent implements OnInit {
 
   openAddDialog(): void {
     const dialogRef = this.dialog.open(StudentFormDialogComponent, {
-      width: '560px', data: {}
+      width: '560px', data: { availableRooms: [] } // In real app, fetch rooms
     });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.fetchStudents();
-        this.snackBar.open('Student added successfully', 'Close', { duration: 3000 });
+        this.studentService.create(result).subscribe({
+          next: () => {
+            this.fetchStudents();
+            this.snackBar.open('Student added successfully', 'Close', { duration: 3000 });
+          },
+          error: (err) => this.snackBar.open('Failed to add student', 'Close', { duration: 3000 })
+        });
       }
     });
   }
 
   openEditDialog(student: any): void {
     const dialogRef = this.dialog.open(StudentFormDialogComponent, {
-      width: '560px', data: { student }
+      width: '560px', data: { student, availableRooms: [student.room_number] }
     });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        this.fetchStudents();
-        this.snackBar.open('Student updated successfully', 'Close', { duration: 3000 });
+        this.studentService.update(student.id, result).subscribe({
+          next: () => {
+            this.fetchStudents();
+            this.snackBar.open('Student updated successfully', 'Close', { duration: 3000 });
+          },
+          error: (err) => this.snackBar.open('Failed to update student', 'Close', { duration: 3000 })
+        });
       }
     });
   }

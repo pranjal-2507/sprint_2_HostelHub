@@ -82,8 +82,8 @@ export class LogoutConfirmDialogComponent { }
             <mat-icon>person_outline</mat-icon>
           </button>
           <mat-menu #profileMenu="matMenu" class="glass-menu">
-            <button mat-menu-item routerLink="/admin/profile"><mat-icon>person</mat-icon><span>Profile</span></button>
-            <button mat-menu-item [routerLink]="['/admin/profile']" [queryParams]="{ tab: 2 }"><mat-icon>settings</mat-icon><span>Settings</span></button>
+            <button mat-menu-item [routerLink]="getProfileLink()"><mat-icon>person</mat-icon><span>Profile</span></button>
+            <button mat-menu-item [routerLink]="[getProfileLink()]" [queryParams]="{ tab: 2 }"><mat-icon>settings</mat-icon><span>Settings</span></button>
             <mat-divider></mat-divider>
             <button mat-menu-item (click)="logout()"><mat-icon>logout</mat-icon><span>Logout</span></button>
           </mat-menu>
@@ -122,6 +122,7 @@ export class LogoutConfirmDialogComponent { }
       background: rgba(255,255,255,0.6) !important;
       border: 1px solid rgba(0,0,0,0.03) !important;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex; align-items: center; justify-content: center;
       
       mat-icon { font-size: 20px; color: var(--text-main); }
       
@@ -131,10 +132,27 @@ export class LogoutConfirmDialogComponent { }
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
       }
     }
-    body.dark-theme .nav-btn {
-      background: rgba(30, 41, 59, 0.6) !important;
-      border-color: rgba(255,255,255,0.05) !important;
-      mat-icon { color: #f1f5f9; }
+
+    .menu-trigger {
+      color: var(--text-heading) !important;
+      margin-right: 8px;
+    }
+    
+    :host-context(body.dark-theme) .nav-btn {
+      background: rgba(30, 41, 59, 0.8) !important;
+      border-color: rgba(255,255,255,0.1) !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+      
+      mat-icon { color: #ffffff !important; }
+      
+      &:hover {
+        background: rgba(51, 65, 85, 1) !important;
+        border-color: rgba(255,255,255,0.2) !important;
+      }
+    }
+
+    :host-context(body.dark-theme) .menu-trigger {
+      color: #ffffff !important;
     }
     
     .notif-header { padding: 12px 16px; font-family: 'Outfit'; font-weight: 700; font-size: 14px; color: var(--text-heading); border-bottom: 1px solid var(--border-color); }
@@ -150,7 +168,9 @@ export class NavbarComponent implements OnInit {
   stats: DashboardStats | null = null;
 
   ngOnInit() {
-    this.loadStats();
+    if (this.authService.isAdmin()) {
+      this.loadStats();
+    }
   }
 
   loadStats() {
@@ -158,6 +178,10 @@ export class NavbarComponent implements OnInit {
       next: (stats) => this.stats = stats,
       error: (err) => console.error('Error loading notification stats', err)
     });
+  }
+
+  getProfileLink(): string {
+    return this.authService.isAdmin() ? '/admin/profile' : '/hosteler/profile';
   }
 
   get activeNotificationsCount(): number {
