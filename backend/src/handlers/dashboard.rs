@@ -14,20 +14,25 @@ pub async fn get_admin_dashboard_stats(
 ) -> Result<Json<DashboardStats>, (StatusCode, String)> {
     let cache_key = "admin_dashboard_stats";
     
-    // 1. Try to get from Redis
-    let mut conn = state.redis.get().await.map_err(|e| {
-        eprintln!("Redis connection error: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Cache error".to_string())
-    })?;
+    // 1. Try to get from Redis (Optional)
+    let mut redis_conn = match state.redis.get().await {
+        Ok(conn) => Some(conn),
+        Err(e) => {
+            eprintln!("Redis connection error (stats): {:?}", e);
+            None
+        }
+    };
 
-    if let Ok(cached_data) = conn.get::<_, String>(cache_key).await {
-        if let Ok(stats) = serde_json::from_str::<DashboardStats>(&cached_data) {
-            println!("✓ Admin stats cache hit!");
-            return Ok(Json(stats));
+    if let Some(ref mut conn) = redis_conn {
+        if let Ok(cached_data) = conn.get::<_, String>(cache_key).await {
+            if let Ok(stats) = serde_json::from_str::<DashboardStats>(&cached_data) {
+                println!("✓ Admin stats cache hit!");
+                return Ok(Json(stats));
+            }
         }
     }
 
-    println!("Cache miss. Fetching admin dashboard stats from DB...");
+    println!("Cache miss or Redis down. Fetching admin dashboard stats from DB...");
     
     let total_students: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM users WHERE role = 'hosteler'"
@@ -89,25 +94,18 @@ pub async fn get_admin_dashboard_stats(
         (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
     })?;
 
-    let pending_maintenance: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM maintenance_requests WHERE status = 'pending'"
-    )
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Error counting pending maintenance: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
-    })?;
+    // Use fetch_optional to avoid 500 if maintenance_requests table is empty or missing data
+    let pending_maintenance: (i64,) = match sqlx::query_as("SELECT COUNT(*) FROM maintenance_requests WHERE status = 'pending'")
+        .fetch_one(&state.db).await {
+            Ok(v) => v,
+            Err(_) => (0,)
+        };
 
-    let visitors_checked_in: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM visitors WHERE exit_time IS NULL"
-    )
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| {
-        eprintln!("Error counting checked-in visitors: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
-    })?;
+    let visitors_checked_in: (i64,) = match sqlx::query_as("SELECT COUNT(*) FROM visitors WHERE exit_time IS NULL")
+        .fetch_one(&state.db).await {
+            Ok(v) => v,
+            Err(_) => (0,)
+        };
 
     println!("Dashboard stats fetched successfully: Students={}, Rooms={}, Occupied={}", total_students.0, total_rooms.0, occupied_rooms.0);
 
@@ -123,9 +121,11 @@ pub async fn get_admin_dashboard_stats(
         visitors_checked_in: visitors_checked_in.0,
     };
 
-    // 2. Save to Redis (TTL 60s)
-    if let Ok(json) = serde_json::to_string(&stats) {
-        let _: Result<(), _> = conn.set_ex(cache_key, json, 60).await;
+    // 2. Save to Redis if available
+    if let Some(mut conn) = redis_conn {
+        if let Ok(json) = serde_json::to_string(&stats) {
+            let _: Result<(), _> = conn.set_ex(cache_key, json, 60).await;
+        }
     }
 
     Ok(Json(stats))
@@ -140,20 +140,25 @@ pub async fn get_hosteler_dashboard(
 
     let cache_key = format!("hosteler_dashboard:{}", user_id);
     
-    // 1. Try to get from Redis
-    let mut conn = state.redis.get().await.map_err(|e| {
-        eprintln!("Redis connection error: {:?}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Cache error".to_string())
-    })?;
+    // 1. Try to get from Redis (Optional)
+    let mut redis_conn = match state.redis.get().await {
+        Ok(conn) => Some(conn),
+        Err(e) => {
+            eprintln!("Redis connection error (hosteler_stats): {:?}", e);
+            None
+        }
+    };
 
-    if let Ok(cached_data) = conn.get::<_, String>(&cache_key).await {
-        if let Ok(data) = serde_json::from_str::<HostelerDashboardData>(&cached_data) {
-            println!("✓ Hosteler dashboard cache hit for user {}", user_id);
-            return Ok(Json(data));
+    if let Some(ref mut conn) = redis_conn {
+        if let Ok(cached_data) = conn.get::<_, String>(&cache_key).await {
+            if let Ok(data) = serde_json::from_str::<HostelerDashboardData>(&cached_data) {
+                println!("✓ Hosteler dashboard cache hit for user {}", user_id);
+                return Ok(Json(data));
+            }
         }
     }
 
-    println!("Cache miss. Fetching hosteler dashboard from DB for user {}...", user_id);
+    println!("Cache miss or Redis down. Fetching hosteler dashboard from DB for user {}...", user_id);
 
     // Get user info
     let user: crate::models::User = sqlx::query_as(
@@ -208,15 +213,23 @@ pub async fn get_hosteler_dashboard(
     .bind(uuid)
     .fetch_all(&state.db)
     .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .map_err(|e| {
+        eprintln!("Error fetching complaints: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
+    })?;
 
     // Get recent notices
-    let recent_notices: Vec<Notice> = sqlx::query_as(
+    let recent_notices: Vec<Notice> = match sqlx::query_as(
         "SELECT id, title, content, category, priority, created_by, created_at FROM notices ORDER BY created_at DESC LIMIT 5"
     )
     .fetch_all(&state.db)
-    .await
-    .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+    .await {
+        Ok(notices) => notices,
+        Err(e) => {
+            eprintln!("Error fetching notices (dashboard): {}", e);
+            Vec::new() // Fallback to empty
+        }
+    };
 
     let dashboard_data = HostelerDashboardData {
         user: UserResponse {
@@ -235,9 +248,11 @@ pub async fn get_hosteler_dashboard(
         recent_notices,
     };
 
-    // 2. Save to Redis (TTL 60s)
-    if let Ok(json) = serde_json::to_string(&dashboard_data) {
-        let _: Result<(), _> = conn.set_ex(&cache_key, json, 60).await;
+    // 2. Save to Redis if available
+    if let Some(mut conn) = redis_conn {
+        if let Ok(json) = serde_json::to_string(&dashboard_data) {
+            let _: Result<(), _> = conn.set_ex(&cache_key, json, 60).await;
+        }
     }
 
     Ok(Json(dashboard_data))
@@ -271,4 +286,4 @@ pub async fn get_hosteler_room_info(
     } else {
         Err((StatusCode::NOT_FOUND, "No room assigned to this user".to_string()))
     }
-}
+}

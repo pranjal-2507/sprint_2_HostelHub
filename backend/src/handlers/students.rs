@@ -215,3 +215,79 @@ pub async fn update_student(
         room_number: updated.room_number,
     }))
 }
+
+pub async fn create_student(
+    RequireAdmin(_admin_id): RequireAdmin,
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<crate::models::RegisterRequest>,
+) -> Result<(StatusCode, Json<UserResponse>), (StatusCode, String)> {
+    let hashed_password = crate::auth::service::hash_password(&payload.password);
+    let user_id = Uuid::new_v4();
+    
+    // 1. Check if room exists and has capacity (if provided)
+    if let Some(room_num) = &payload.room_number {
+        let room: Option<crate::models::Room> = sqlx::query_as(
+            "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, price_per_month::FLOAT8, status, created_at FROM rooms WHERE room_number = $1"
+        )
+        .bind(room_num)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error checking room".to_string()))?;
+
+        if let Some(r) = room {
+            if r.occupancy.unwrap_or(0) >= r.capacity {
+                return Err((StatusCode::BAD_REQUEST, "Selected room is already full".to_string()));
+            }
+        } else {
+            return Err((StatusCode::NOT_FOUND, "Selected room number does not exist".to_string()));
+        }
+    }
+
+    // 2. Create student
+    let result = sqlx::query(
+        r#"
+        INSERT INTO users (id, name, email, password_hash, role, phone, course, year, room_number, created_at)
+        VALUES ($1, $2, $3, $4, 'hosteler', $5, $6, $7, $8, NOW())
+        "#
+    )
+    .bind(user_id)
+    .bind(&payload.name)
+    .bind(&payload.email)
+    .bind(&hashed_password)
+    .bind(&payload.phone)
+    .bind(&payload.course)
+    .bind(&payload.year)
+    .bind(&payload.room_number)
+    .execute(&state.db)
+    .await;
+
+    match result {
+        Ok(_) => {
+            // 3. Update room occupancy if assigned
+            if let Some(room_num) = &payload.room_number {
+                let _ = sqlx::query("UPDATE rooms SET occupancy = occupancy + 1, status = 'occupied' WHERE room_number = $1")
+                    .bind(room_num)
+                    .execute(&state.db)
+                    .await;
+            }
+
+            Ok((StatusCode::CREATED, Json(UserResponse {
+                id: user_id,
+                name: payload.name,
+                email: payload.email,
+                role: "hosteler".to_string(),
+                phone: payload.phone,
+                course: payload.course,
+                year: payload.year,
+                room_number: payload.room_number,
+            })))
+        },
+        Err(e) => {
+            if e.to_string().contains("duplicate key") {
+                Err((StatusCode::CONFLICT, "Email already exists".to_string()))
+            } else {
+                Err((StatusCode::INTERNAL_SERVER_ERROR, format!("Database error: {}", e)))
+            }
+        }
+    }
+}
