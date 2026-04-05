@@ -63,8 +63,8 @@ pub async fn assign_room(
         return Err((StatusCode::NOT_FOUND, "Student not found".to_string()));
     }
 
-    // Update room occupancy
-    sqlx::query("UPDATE rooms SET occupancy = occupancy + 1 WHERE room_number = $1")
+    // Update room occupancy and status
+    sqlx::query("UPDATE rooms SET occupancy = occupancy + 1, status = CASE WHEN occupancy + 1 >= capacity THEN 'occupied' ELSE 'available' END WHERE room_number = $1")
         .bind(&room_number)
         .execute(&state.db)
         .await
@@ -78,7 +78,7 @@ pub async fn remove_student(
     State(state): State<Arc<AppState>>,
     Path(student_id): Path<Uuid>,
 ) -> Result<Json<&'static str>, (StatusCode, String)> {
-    // Get student's current room
+    // 1. Get student's current room assignment
     let student: Option<User> = sqlx::query_as(
         "SELECT id, name, email, password_hash, role, phone, course, year, room_number, created_at FROM users WHERE id = $1 AND role = 'hosteler'"
     )
@@ -89,27 +89,35 @@ pub async fn remove_student(
 
     let student = student.ok_or((StatusCode::NOT_FOUND, "Student not found".to_string()))?;
 
-    // Update room occupancy if student had a room
+    // 2. Start transaction
+    let mut tx = state.db.begin().await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to start transaction: {}", e)))?;
+
+    // 3. Update room occupancy and status if student had a room
     if let Some(room_number) = &student.room_number {
-        sqlx::query("UPDATE rooms SET occupancy = occupancy - 1 WHERE room_number = $1")
+        sqlx::query("UPDATE rooms SET occupancy = GREATEST(0, occupancy - 1), status = 'available' WHERE room_number = $1")
             .bind(room_number)
-            .execute(&state.db)
+            .execute(&mut *tx)
             .await
-            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Failed to update room occupancy".to_string()))?;
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to update room occupancy: {}", e)))?;
     }
 
-    // Delete student
+    // 4. Delete student (cascading deletes for fees/complaints will be handled by DB)
     let result = sqlx::query("DELETE FROM users WHERE id = $1")
         .bind(student_id)
-        .execute(&state.db)
+        .execute(&mut *tx)
         .await
-        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string()))?;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Database error deleting student: {}", e)))?;
 
     if result.rows_affected() == 0 {
-        Err((StatusCode::NOT_FOUND, "Student not found".to_string()))
-    } else {
-        Ok(Json("Student removed successfully"))
+        return Err((StatusCode::NOT_FOUND, "Student record not found during deletion".to_string()));
     }
+
+    // 5. Commit transaction
+    tx.commit().await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to commit deletion: {}", e)))?;
+
+    Ok(Json("Student removed successfully"))
 }
 
 pub async fn get_student_by_id(
@@ -174,7 +182,7 @@ pub async fn update_student(
                 return Err((StatusCode::BAD_REQUEST, "Target room is full or does not exist".to_string()));
             }
 
-            let _ = sqlx::query("UPDATE rooms SET occupancy = occupancy + 1 WHERE room_number = $1")
+            let _ = sqlx::query("UPDATE rooms SET occupancy = occupancy + 1, status = CASE WHEN occupancy + 1 >= capacity THEN 'occupied' ELSE 'available' END WHERE room_number = $1")
                 .bind(new_room)
                 .execute(&state.db)
                 .await;
@@ -265,7 +273,7 @@ pub async fn create_student(
         Ok(_) => {
             // 3. Update room occupancy if assigned
             if let Some(room_num) = &payload.room_number {
-                let _ = sqlx::query("UPDATE rooms SET occupancy = occupancy + 1, status = 'occupied' WHERE room_number = $1")
+                let _ = sqlx::query("UPDATE rooms SET occupancy = occupancy + 1, status = CASE WHEN occupancy + 1 >= capacity THEN 'occupied' ELSE 'available' END WHERE room_number = $1")
                     .bind(room_num)
                     .execute(&state.db)
                     .await;

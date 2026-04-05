@@ -159,7 +159,10 @@ interface HostelerDashboardData {
               <div class="notice-card">
                 <div class="notice-header">
                   <h3>{{ notice.title }}</h3>
-                  <span class="badge" [ngClass]="'priority-' + notice.priority">{{ notice.priority }}</span>
+                  <span class="badge" [ngClass]="'priority-' + notice.priority">
+                    <mat-icon style="font-size: 14px; width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;">{{ getPriorityIcon(notice.priority) }}</mat-icon>
+                    {{ notice.priority | titlecase }}
+                  </span>
                 </div>
                 <p>{{ notice.content }}</p>
                 <span class="date">{{ notice.created_at | date:'dd MMM, hh:mm a' }}</span>
@@ -265,7 +268,7 @@ interface HostelerDashboardData {
     
     .room-info-box { display: flex; flex-direction: column; gap: 16px; }
     .info-row { display: flex; gap: 24px; }
-    .info-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .info-col { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
     .info-col .label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
     .info-col .val { font-size: 15px; font-weight: 600; color: var(--text-main); }
     
@@ -275,6 +278,15 @@ interface HostelerDashboardData {
     .notice-header h3 { font-size: 14px; font-weight: 700; margin: 0; color: var(--text-main); }
     .notice-card p { font-size: 13px; color: var(--text-muted); margin: 0 0 8px; line-height: 1.5; }
     .notice-card .date { font-size: 11px; color: var(--text-muted); }
+    
+    .priority-high { background: var(--badge-danger-bg) !important; color: var(--badge-danger-text) !important; }
+    .priority-medium, .priority-normal { background: var(--badge-info-bg) !important; color: var(--badge-info-text) !important; }
+    .priority-low { background: var(--badge-success-bg) !important; color: var(--badge-success-text) !important; }
+    
+    .badge {
+      display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      mat-icon { margin-right: 4px; }
+    }
     
     .section-table { width: 100%; }
     .empty-msg { text-align: center; color: #94a3b8; padding: 20px; font-size: 14px; }
@@ -296,15 +308,10 @@ export class HostelerDashboardComponent implements OnInit, OnDestroy {
   private dataSubscription?: Subscription;
 
   ngOnInit() {
-    // 1. Get initial data from resolver (Pre-fetched before page open)
     this.dashboardData = this.route.snapshot.data['dashboardData'];
-
-    // 2. Subscribe to background updates (Stale-While-Revalidate)
     this.dataSubscription = this.authService.hostelerDashboard$.subscribe(data => {
       if (data) this.dashboardData = data;
     });
-
-    // 3. Fallback: If resolver failed, fetch manually
     if (!this.dashboardData) {
       this.loadDashboardData();
     }
@@ -336,5 +343,14 @@ export class HostelerDashboardComponent implements OnInit, OnDestroy {
 
   getActiveComplaintsCount(): number {
     return this.dashboardData?.recent_complaints?.filter(complaint => complaint.status !== 'resolved').length || 0;
+  }
+
+  getPriorityIcon(priority: string): string {
+    const iconMap: { [key: string]: string } = {
+      'high': 'priority_high',
+      'medium': 'info',
+      'low': 'low_priority'
+    };
+    return iconMap[priority] || 'info';
   }
 }

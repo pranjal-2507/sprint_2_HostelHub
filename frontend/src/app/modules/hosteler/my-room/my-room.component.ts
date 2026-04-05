@@ -56,21 +56,21 @@ import { RoomService } from '../../../core/services/room.service';
                   <mat-icon class="info-icon">person</mat-icon>
                   <div class="info-content">
                     <span class="info-label">Occupied</span>
-                    <span class="info-value">{{ roomInfo.occupied || roomInfo.occupancy }} Students</span>
+                    <span class="info-value">{{ roomInfo.occupancy }} Students</span>
                   </div>
                 </div>
                 <div class="info-item">
                   <mat-icon class="info-icon">home</mat-icon>
                   <div class="info-content">
                     <span class="info-label">Room Type</span>
-                    <span class="info-value">{{ roomInfo.room_type || roomInfo.type | titlecase }}</span>
+                    <span class="info-value">{{ roomInfo.room_type | titlecase }}</span>
                   </div>
                 </div>
                 <div class="info-item">
                   <mat-icon class="info-icon">payments</mat-icon>
                   <div class="info-content">
                     <span class="info-label">Monthly Rent</span>
-                    <span class="info-value">₹{{ (roomInfo.rent || roomInfo.pricePerMonth) | number }}</span>
+                    <span class="info-value">₹{{ roomInfo.price_per_month | number }}</span>
                   </div>
                 </div>
               </div>
@@ -96,7 +96,7 @@ import { RoomService } from '../../../core/services/room.service';
                 <div class="occupancy-circle">
                   <div class="occupancy-fill" [style.height.%]="getOccupancyPercentage()"></div>
                   <div class="occupancy-text">
-                    <span class="occupancy-number">{{ (roomInfo.occupied || roomInfo.occupancy) }}/{{ roomInfo.capacity }}</span>
+                    <span class="occupancy-number">{{ roomInfo.occupancy }}/{{ roomInfo.capacity }}</span>
                     <span class="occupancy-label">Occupied</span>
                   </div>
                 </div>
@@ -104,7 +104,7 @@ import { RoomService } from '../../../core/services/room.service';
               <div class="occupancy-details">
                 <div class="detail-item">
                   <span class="detail-label">Available Beds</span>
-                  <span class="detail-value">{{ roomInfo.capacity - (roomInfo.occupied || roomInfo.occupancy) }}</span>
+                  <span class="detail-value">{{ roomInfo.capacity - roomInfo.occupancy }}</span>
                 </div>
                 <div class="detail-item">
                   <span class="detail-label">Occupancy Rate</span>

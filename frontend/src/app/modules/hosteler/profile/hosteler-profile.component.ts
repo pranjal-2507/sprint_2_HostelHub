@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -33,7 +34,7 @@ import { ThemeService } from '../../../shared/services/theme.service';
     <div class="profile">
       <h1 class="page-title">My Profile</h1>
 
-      <mat-tab-group class="profile-tabs">
+      <mat-tab-group class="profile-tabs" [selectedIndex]="selectedIndex" (selectedIndexChange)="selectedIndex = $event">
         <!-- Personal Information Tab -->
         <mat-tab label="Personal Information">
           <div class="tab-content">
@@ -53,21 +54,14 @@ import { ThemeService } from '../../../shared/services/theme.service';
                 <div class="form-row">
                   <mat-form-field appearance="outline">
                     <mat-label>Full Name</mat-label>
-                    <input matInput formControlName="name" placeholder="Enter your full name">
-                    <mat-error *ngIf="profileForm.get('name')?.hasError('required')">
-                      Name is required
-                    </mat-error>
+                    <input matInput formControlName="name" readonly placeholder="Enter your full name">
+                    <mat-hint>Name changes require admin approval</mat-hint>
                   </mat-form-field>
 
                   <mat-form-field appearance="outline">
                     <mat-label>Email Address</mat-label>
-                    <input matInput formControlName="email" type="email" placeholder="Enter your email">
-                    <mat-error *ngIf="profileForm.get('email')?.hasError('required')">
-                      Email is required
-                    </mat-error>
-                    <mat-error *ngIf="profileForm.get('email')?.hasError('email')">
-                      Please enter a valid email
-                    </mat-error>
+                    <input matInput formControlName="email" type="email" readonly placeholder="Enter your email">
+                    <mat-hint>Email changes require admin approval</mat-hint>
                   </mat-form-field>
                 </div>
 
@@ -78,33 +72,6 @@ import { ThemeService } from '../../../shared/services/theme.service';
                     <mat-error *ngIf="profileForm.get('phone')?.hasError('pattern')">
                       Please enter a valid phone number
                     </mat-error>
-                  </mat-form-field>
-
-                  <mat-form-field appearance="outline">
-                    <mat-label>Course</mat-label>
-                    <mat-select formControlName="course">
-                      <mat-option value="B.Tech CSE">B.Tech Computer Science</mat-option>
-                      <mat-option value="B.Tech ECE">B.Tech Electronics</mat-option>
-                      <mat-option value="B.Tech ME">B.Tech Mechanical</mat-option>
-                      <mat-option value="B.Tech CE">B.Tech Civil</mat-option>
-                      <mat-option value="MBA">Master of Business Administration</mat-option>
-                      <mat-option value="BBA">Bachelor of Business Administration</mat-option>
-                      <mat-option value="M.Tech">M.Tech</mat-option>
-                      <mat-option value="Other">Other</mat-option>
-                    </mat-select>
-                  </mat-form-field>
-                </div>
-
-                <div class="form-row">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Academic Year</mat-label>
-                    <mat-select formControlName="year">
-                      <mat-option value="1">1st Year</mat-option>
-                      <mat-option value="2">2nd Year</mat-option>
-                      <mat-option value="3">3rd Year</mat-option>
-                      <mat-option value="4">4th Year</mat-option>
-                      <mat-option value="5">5th Year</mat-option>
-                    </mat-select>
                   </mat-form-field>
 
                   <mat-form-field appearance="outline">
@@ -378,9 +345,11 @@ import { ThemeService } from '../../../shared/services/theme.service';
   `],
 })
 export class HostelerProfileComponent implements OnInit {
+  private route = inject(ActivatedRoute);
   profileForm: FormGroup;
   passwordForm: FormGroup;
   currentUser: any;
+  selectedIndex = 0;
 
   constructor(
     private fb: FormBuilder,
@@ -392,8 +361,6 @@ export class HostelerProfileComponent implements OnInit {
       name: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       phone: ['', Validators.pattern(/^[0-9]{10}$/)],
-      course: [''],
-      year: [''],
       roomNumber: ['']
     });
 
@@ -405,15 +372,19 @@ export class HostelerProfileComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['tab'] !== undefined) {
+        this.selectedIndex = Number(params['tab']);
+      }
+    });
+
     this.currentUser = this.authService.currentUserValue;
     if (this.currentUser) {
       this.profileForm.patchValue({
         name: this.currentUser.name,
         email: this.currentUser.email,
         phone: this.currentUser.phone || '',
-        course: this.currentUser.course || '',
-        year: this.currentUser.year || '',
-        roomNumber: this.currentUser.roomNumber || 'Not assigned'
+        roomNumber: this.currentUser.room_number || this.currentUser.roomNumber || 'Not assigned'
       });
     }
   }
@@ -430,14 +401,32 @@ export class HostelerProfileComponent implements OnInit {
 
   updateProfile() {
     if (this.profileForm.valid) {
-      console.log('Updating profile:', this.profileForm.value);
-      // Implement API call here
-      this.snackBar.open('Profile updated successfully!', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'right',
-        verticalPosition: 'top'
+      const formValue = this.profileForm.value;
+      
+      const payload = {
+        name: formValue.name,
+        email: formValue.email,
+        phone: formValue.phone
+      };
+
+      this.authService.updateProfile(payload).subscribe({
+        next: (updatedUser) => {
+          this.currentUser = updatedUser;
+          this.snackBar.open('Profile updated successfully!', 'Close', {
+            duration: 3000,
+            horizontalPosition: 'right',
+            verticalPosition: 'top'
+          });
+          this.profileForm.markAsPristine();
+        },
+        error: (err) => {
+          this.snackBar.open('Failed to update profile: ' + (err.message || 'Unknown error'), 'Close', {
+            duration: 4000,
+            horizontalPosition: 'right',
+            verticalPosition: 'top'
+          });
+        }
       });
-      this.profileForm.markAsPristine();
     }
   }
 

@@ -43,23 +43,6 @@ pub async fn get_rooms(
     Ok(Json(rooms))
 }
 
-pub async fn get_room_by_id(
-    State(state): State<Arc<AppState>>,
-    Path(id): Path<Uuid>,
-) -> Result<Json<Room>, (StatusCode, String)> {
-    let room = sqlx::query_as::<Postgres, Room>(
-        "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at 
-         FROM rooms 
-         WHERE id = $1"
-    )
-    .bind(id)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|e| (StatusCode::NOT_FOUND, format!("Room not found: {}", e)))?;
-
-    Ok(Json(room))
-}
-
 pub async fn create_room(
     _admin: RequireAdmin,
     State(state): State<Arc<AppState>>,
@@ -92,6 +75,25 @@ pub async fn delete_room(
     State(state): State<Arc<AppState>>,
     Path(room_id): Path<Uuid>,
 ) -> Result<Json<&'static str>, (StatusCode, String)> {
+    // 1. Check if room exists and its current occupancy
+    let room = sqlx::query_as::<Postgres, Room>(
+        "SELECT id, hostel_id, room_number, floor, capacity, occupancy, room_type, status, price_per_month::FLOAT8 AS price_per_month, created_at 
+         FROM rooms 
+         WHERE id = $1"
+    )
+    .bind(room_id)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Error checking room occupancy: {}", e)))?;
+
+    let room = room.ok_or((StatusCode::NOT_FOUND, "Room not found".to_string()))?;
+
+    // 2. Prevent deletion if room is occupied
+    if room.occupancy.unwrap_or(0) > 0 {
+        return Err((StatusCode::BAD_REQUEST, "Cannot delete room with active occupants. Please unassign students first.".to_string()));
+    }
+
+    // 3. Proceed with deletion
     let result = sqlx::query("DELETE FROM rooms WHERE id = $1")
         .bind(room_id)
         .execute(&state.db)

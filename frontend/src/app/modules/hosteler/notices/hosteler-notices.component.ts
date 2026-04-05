@@ -65,7 +65,7 @@ import { NoticeService } from '../../../core/services/notice.service';
                         <h2 class="notice-title">{{ notice.title }}</h2>
                         <mat-chip-set>
                           <mat-chip [class]="'priority-' + notice.priority">
-                            <mat-icon>{{ getPriorityIcon(notice.priority) }}</mat-icon>
+                            <mat-icon matChipAvatar>{{ getPriorityIcon(notice.priority) }}</mat-icon>
                             {{ notice.priority | titlecase }}
                           </mat-chip>
                           @if (notice.category) {
@@ -90,12 +90,6 @@ import { NoticeService } from '../../../core/services/notice.service';
                         <mat-icon>person</mat-icon>
                         <span>Posted by Admin</span>
                       </div>
-                      <div class="notice-actions">
-                        <button mat-stroked-button class="bookmark-btn">
-                          <mat-icon>bookmark_border</mat-icon>
-                          Bookmark
-                        </button>
-                      </div>
                     </div>
                   </mat-card>
                 }
@@ -113,7 +107,7 @@ import { NoticeService } from '../../../core/services/notice.service';
                         <h2 class="notice-title">{{ notice.title }}</h2>
                         <mat-chip-set>
                           <mat-chip class="priority-high">
-                            <mat-icon>priority_high</mat-icon>
+                            <mat-icon matChipAvatar>priority_high</mat-icon>
                             High Priority
                           </mat-chip>
                         </mat-chip-set>
@@ -191,8 +185,32 @@ import { NoticeService } from '../../../core/services/notice.service';
     .notice-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 16px; border-top: 1px solid var(--border-color); }
     .notice-author { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); mat-icon { font-size: 16px; width: 16px; height: 16px; } }
     .priority-high { background: var(--badge-danger-bg) !important; color: var(--badge-danger-text) !important; }
-    .priority-normal { background: var(--badge-info-bg) !important; color: var(--badge-info-text) !important; }
+    .priority-medium, .priority-normal { background: var(--badge-info-bg) !important; color: var(--badge-info-text) !important; }
     .priority-low { background: var(--badge-success-bg) !important; color: var(--badge-success-text) !important; }
+    
+    /* Icon Size and Alignment Fixes */
+    mat-chip {
+      padding: 0 14px !important;
+      min-height: 28px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      border: none !important;
+
+      [matChipAvatar], mat-icon {
+        width: 14px !important;
+        height: 14px !important;
+        font-size: 14px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 0 6px 0 0 !important;
+      }
+    }
+
+
     .category-chip { background: var(--surface-2) !important; color: var(--text-muted) !important; }
     .empty-notices-card { background: var(--card-bg) !important; border: 1px solid var(--border-color); border-radius: 12px !important; padding: 60px 40px !important; }
     .empty-state { text-align: center; color: var(--text-muted); mat-icon { font-size: 64px; width: 64px; height: 64px; margin-bottom: 16px; } h3 { font-size: 18px; color: var(--text-main); margin: 0 0 8px; } p { font-size: 14px; margin: 0; } }

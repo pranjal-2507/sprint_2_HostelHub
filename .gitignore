@@ -1,30 +1,48 @@
-# Global ignores
-.DS_Store
-Thumbs.db
+# Build artifacts
+**/target/
+**/node_modules/
+**/dist/
+**/.angular/
+**/debug/
+**/release/
+**/build/
+**/out-tsc/
+**/bazel-out/
+**/coverage/
+
+# Logs
 *.log
-*.tmp
-temp_*.txt
-
-# IDEs and editors
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Build and dependencies
-node_modules/
-dist/
-/target
-debug/
-release/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Environment and secrets
 .env
 .env.local
 .env.*.local
-!.env.example
+! .env.example
 
-# Angular specific
-/.angular/
-/.cache/
-/tmp/
+# Runtime and temp files
+*.tmp
+temp_*.txt
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.vscode/
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.history/
+.cache/
+
+# Project specific
+kill-port.ps1.tmp
+proxy.conf.json.tmp

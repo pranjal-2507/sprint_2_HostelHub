@@ -221,7 +221,10 @@ export class NewComplaintDialogComponent implements OnInit {
                       <h3 class="complaint-title">{{ complaint.title }}</h3>
                       <div class="complaint-badges">
                         <mat-chip-set>
-                          <mat-chip [class]="'priority-' + complaint.priority">{{ complaint.priority | titlecase }}</mat-chip>
+                          <mat-chip [class]="'priority-' + complaint.priority">
+                            <mat-icon>{{ getPriorityIcon(complaint.priority) }}</mat-icon>
+                            {{ complaint.priority | titlecase }}
+                          </mat-chip>
                           <mat-chip [class]="complaint.status | statusBadge">{{ complaint.status | titlecase }}</mat-chip>
                         </mat-chip-set>
                       </div>
@@ -366,6 +369,28 @@ export class NewComplaintDialogComponent implements OnInit {
     .priority-medium { background: var(--badge-warning-bg); color: var(--badge-warning-text); }
     .priority-low { background: var(--badge-success-bg); color: var(--badge-success-text); }
     
+    /* Icon Size and Alignment Fixes */
+    mat-chip {
+      padding: 4px 10px !important;
+      min-height: 28px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      border: none !important;
+
+      mat-icon {
+        font-size: 14px !important;
+        width: 14px !important;
+        height: 14px !important;
+        margin: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+    }
+    
     .empty-state {
       text-align: center; padding: 60px 20px; color: #94a3b8;
       .status-icon { font-size: 64px; width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.5; }
@@ -463,5 +488,14 @@ export class HostelerComplaintsComponent implements OnInit {
         }
       });
     }
+  }
+
+  getPriorityIcon(priority: string): string {
+    const iconMap: { [key: string]: string } = {
+      'high': 'priority_high',
+      'medium': 'info',
+      'low': 'low_priority'
+    };
+    return iconMap[priority] || 'info';
   }
 }
