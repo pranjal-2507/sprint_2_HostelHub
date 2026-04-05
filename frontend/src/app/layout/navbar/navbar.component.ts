@@ -82,10 +82,19 @@ export class LogoutConfirmDialogComponent { }
             <mat-icon>person_outline</mat-icon>
           </button>
           <mat-menu #profileMenu="matMenu" class="glass-menu">
-            <button mat-menu-item [routerLink]="getProfileLink()"><mat-icon>person</mat-icon><span>Profile</span></button>
-            <button mat-menu-item [routerLink]="[getProfileLink()]" [queryParams]="{ tab: 2 }"><mat-icon>settings</mat-icon><span>Settings</span></button>
+            <a mat-menu-item [routerLink]="getProfileLink()">
+              <mat-icon>person</mat-icon>
+              <span>Profile</span>
+            </a>
+            <a mat-menu-item [routerLink]="getProfileLink()" [queryParams]="{ tab: 2 }">
+              <mat-icon>settings</mat-icon>
+              <span>Settings</span>
+            </a>
             <mat-divider></mat-divider>
-            <button mat-menu-item (click)="logout()"><mat-icon>logout</mat-icon><span>Logout</span></button>
+            <button mat-menu-item (click)="logout()">
+              <mat-icon>logout</mat-icon>
+              <span>Logout</span>
+            </button>
           </mat-menu>
         </div>
       </mat-toolbar>

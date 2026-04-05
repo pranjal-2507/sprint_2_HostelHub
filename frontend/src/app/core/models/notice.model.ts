@@ -6,4 +6,5 @@ export interface Notice {
     priority: 'low' | 'medium' | 'high';
     created_by: string;
     created_at: string;
+    is_bookmarked?: boolean;
 }

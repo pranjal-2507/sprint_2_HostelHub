@@ -5,7 +5,6 @@ mod models;
 mod routes;
 mod seed;
 
-use axum::http::{header, Method};
 use dotenv::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
@@ -155,7 +154,7 @@ async fn main() {
         r#"
         CREATE TABLE IF NOT EXISTS fees (
             id UUID PRIMARY KEY,
-            student_id UUID NOT NULL REFERENCES users(id),
+            student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             amount INTEGER NOT NULL,
             fee_type VARCHAR NOT NULL,
             due_date TIMESTAMP NOT NULL,
@@ -185,7 +184,7 @@ async fn main() {
         r#"
         CREATE TABLE IF NOT EXISTS complaints (
             id UUID PRIMARY KEY,
-            student_id UUID NOT NULL REFERENCES users(id),
+            student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             title VARCHAR NOT NULL,
             description TEXT NOT NULL,
             status VARCHAR DEFAULT 'pending',
@@ -210,6 +209,17 @@ async fn main() {
         let sql = format!("ALTER TABLE complaints ADD COLUMN IF NOT EXISTS {}", col);
         let _ = sqlx::query(&sql).execute(&state.db).await;
     }
+    // Ensuring ON DELETE CASCADE for existing tables
+    let _ = sqlx::query("ALTER TABLE fees DROP CONSTRAINT IF EXISTS fees_student_id_fkey").execute(&state.db).await;
+    let _ = sqlx::query("ALTER TABLE fees ADD CONSTRAINT fees_student_id_fkey FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE").execute(&state.db).await;
+    
+
+    let _ = sqlx::query("ALTER TABLE complaints DROP CONSTRAINT IF EXISTS complaints_student_id_fkey").execute(&state.db).await;
+    let _ = sqlx::query("ALTER TABLE complaints ADD CONSTRAINT complaints_student_id_fkey FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE").execute(&state.db).await;
+
+    // Fix negative occupancy
+    let _ = sqlx::query("UPDATE rooms SET occupancy = 0 WHERE occupancy < 0").execute(&state.db).await;
+
     println!("✓ Complaints table ready");
 
     // Notices table
@@ -242,6 +252,20 @@ async fn main() {
         let _ = sqlx::query(&sql).execute(&state.db).await;
     }
     println!("✓ Notices table ready");
+
+    // Notice Bookmarks table
+    let _ = sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS notice_bookmarks (
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            notice_id UUID NOT NULL REFERENCES notices(id) ON DELETE CASCADE,
+            PRIMARY KEY (user_id, notice_id)
+        )
+        "#,
+    )
+    .execute(&state.db)
+    .await;
+    println!("✓ Notice Bookmarks table ready");
 
     // Seed/Verify database with initial data
     println!("Verifying initial data...");

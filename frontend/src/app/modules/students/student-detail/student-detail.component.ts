@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -151,6 +151,13 @@ import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
             </div>
           </mat-tab>
         </mat-tab-group>
+      } @else {
+        <div class="error-state">
+          <mat-icon class="error-icon">error_outline</mat-icon>
+          <h3>Profile Not Found</h3>
+          <p>The student profile you're looking for doesn't exist or could not be loaded.</p>
+          <button mat-flat-button color="primary" routerLink="/admin/students">Back to Students</button>
+        </div>
       }
     </div>
   `,
@@ -203,6 +210,11 @@ import { StatusBadgePipe } from '../../../shared/pipes/status-badge.pipe';
     .priority-dot.low { background: #059669; }
     .empty-state { text-align: center; padding: 40px; color: var(--text-muted); background: var(--surface-2); border-radius: 12px; border: 1px dashed var(--border-color); }
 
+    .error-state { text-align: center; padding: 60px 40px; color: var(--text-muted); }
+    .error-icon { font-size: 48px; width: 48px; height: 48px; margin-bottom: 20px; color: #dc2626; }
+    .error-state h3 { font-size: 20px; margin-bottom: 12px; color: var(--text-main); }
+    .error-state p { margin-bottom: 24px; }
+    
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @media (max-width: 768px) { .tab-content.grid { grid-template-columns: 1fr; } .profile-header { flex-direction: column; gap: 24px; align-items: flex-start; } .quick-stats { width: 100%; justify-content: space-between; } }
   `],
@@ -211,6 +223,7 @@ export class StudentDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private studentService = inject(StudentService);
   private snackBar = inject(MatSnackBar);
+  private cdr = inject(ChangeDetectorRef);
 
   student: any = null;
   fees: any[] = [];
@@ -233,15 +246,18 @@ export class StudentDetailComponent implements OnInit {
     console.log('Fetching student data for ID:', id);
     this.studentService.getById(id).subscribe({
       next: (val) => {
-        console.log('Student found:', val);
+        console.log('Student detail fetch success:', val);
         this.student = val;
         this.loading = false;
+        this.cdr.detectChanges();
         this.fetchRelatedData(id);
       },
       error: (err) => {
         console.error('Error fetching student details:', err);
-        this.snackBar.open('Failed to load student profile - ' + (err.error || 'Not Found'), 'Close', { duration: 5000 });
+        this.student = null;
         this.loading = false;
+        this.cdr.detectChanges();
+        this.snackBar.open('Failed to load student profile - ' + (err.error?.message || err.error || 'Not Found'), 'Close', { duration: 5000 });
       }
     });
   }

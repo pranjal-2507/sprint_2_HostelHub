@@ -6,12 +6,13 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { Student } from '../../../core/models';
 
 @Component({
   selector: 'app-student-form-dialog',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule],
+  imports: [CommonModule, ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, MatIconModule],
   template: `
     <h2 mat-dialog-title>{{ data.student ? 'Edit Student' : 'Add Student' }}</h2>
     <mat-dialog-content>
@@ -49,6 +50,13 @@ import { Student } from '../../../core/models';
             }
           </mat-select>
         </mat-form-field>
+        @if (!data.student) {
+          <mat-form-field appearance="outline">
+            <mat-label>Initial Password</mat-label>
+            <input matInput type="password" formControlName="password" placeholder="Enter temporary password" />
+            <mat-icon matSuffix>lock</mat-icon>
+          </mat-form-field>
+        }
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -81,6 +89,7 @@ export class StudentFormDialogComponent {
       course: [data.student?.course || '', Validators.required],
       year: [data.student?.year || 1, Validators.required],
       room_number: [data.student?.room_number || '', Validators.required],
+      password: [!data.student ? 'Welcome@123' : '', !data.student ? [Validators.required, Validators.minLength(6)] : []],
     });
   }
 

@@ -39,6 +39,14 @@ pub async fn register(
     
     match result {
         Ok(_) => {
+            // If room was assigned during registration, increment occupancy
+            if let Some(room_num) = &payload.room_number {
+                let _ = sqlx::query("UPDATE rooms SET occupancy = COALESCE(occupancy, 0) + 1, status = CASE WHEN COALESCE(occupancy, 0) + 1 >= capacity THEN 'occupied' ELSE 'available' END WHERE room_number = $1")
+                    .bind(room_num)
+                    .execute(&state.db)
+                    .await;
+            }
+
             let token = generate_jwt(&user_id.to_string());
             let user_res = UserResponse {
                 id: user_id,

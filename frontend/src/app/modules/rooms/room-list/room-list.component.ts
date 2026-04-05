@@ -235,7 +235,8 @@ export class RoomListComponent implements OnInit, AfterViewInit {
           },
           error: (err) => {
             console.error('Error deleting room', err);
-            this.snackBar.open('Failed to delete room', 'Close', { duration: 3000 });
+            const errorMsg = err.error || 'Failed to delete room';
+            this.snackBar.open(errorMsg, 'Close', { duration: 5000 });
           }
         });
       }

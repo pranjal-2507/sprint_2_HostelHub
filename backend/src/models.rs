@@ -178,6 +178,7 @@ pub struct Notice {
     pub created_at: DateTime<Utc>,
 }
 
+
 #[derive(Debug, Deserialize)]
 pub struct CreateNoticeRequest {
     pub title: String,

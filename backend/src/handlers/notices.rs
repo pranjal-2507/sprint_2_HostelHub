@@ -11,7 +11,11 @@ pub async fn get_all_notices(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<Notice>>, (StatusCode, String)> {
     let notices: Vec<Notice> = sqlx::query_as(
-        "SELECT id, title, content, category, priority, created_by, created_at FROM notices ORDER BY created_at DESC"
+        r#"
+        SELECT id, title, content, category, priority, created_by, created_at
+        FROM notices 
+        ORDER BY created_at DESC
+        "#
     )
     .fetch_all(&state.db)
     .await

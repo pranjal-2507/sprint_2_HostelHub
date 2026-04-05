@@ -15,6 +15,7 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { StudentFormDialogComponent } from '../student-form-dialog/student-form-dialog.component';
 import { Student } from '../../../core/models';
 import { StudentService } from '../../../core/services/student.service';
+import { RoomService } from '../../../core/services/room.service';
 
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
@@ -45,14 +46,6 @@ import { RouterModule } from '@angular/router';
         <mat-card class="table-card">
           <div class="toolbar">
             <app-search-filter placeholder="Search students..." (searchChange)="applySearch($event)"></app-search-filter>
-            <mat-form-field appearance="outline" class="filter-field">
-              <mat-label>Role</mat-label>
-              <mat-select (selectionChange)="filterByRole($event.value)">
-                <mat-option value="">All</mat-option>
-                <mat-option value="hosteler">Hosteler</mat-option>
-                <mat-option value="admin">Admin</mat-option>
-              </mat-select>
-            </mat-form-field>
           </div>
           <table mat-table [dataSource]="dataSource" matSort>
             <ng-container matColumnDef="name">
@@ -136,6 +129,7 @@ export class StudentListComponent implements OnInit {
   
   loading = true;
   private studentService = inject(StudentService);
+  private roomService = inject(RoomService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private cdr = inject(ChangeDetectorRef);
@@ -169,27 +163,38 @@ export class StudentListComponent implements OnInit {
     this.dataSource.filter = v.trim().toLowerCase();
   }
 
-  filterByRole(role: string): void {
-    this.dataSource.data = role ? this.allStudents.filter(s => s.role.toLowerCase() === role.toLowerCase()) : this.allStudents;
-    if (this.paginator) {
-      this.paginator.firstPage();
-    }
-    this.cdr.detectChanges();
-  }
 
   openAddDialog(): void {
-    const dialogRef = this.dialog.open(StudentFormDialogComponent, {
-      width: '560px', data: { availableRooms: [] } // In real app, fetch rooms
-    });
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.studentService.create(result).subscribe({
-          next: () => {
-            this.fetchStudents();
-            this.snackBar.open('Student added successfully', 'Close', { duration: 3000 });
-          },
-          error: (err) => this.snackBar.open('Failed to add student', 'Close', { duration: 3000 })
+    // Fetch available rooms first
+    this.roomService.getAll().subscribe({
+      next: (rooms) => {
+        // Filter rooms that have vacancy
+        const availableRooms = rooms
+          .filter(r => (r.occupancy || 0) < r.capacity)
+          .map(r => r.room_number);
+
+        const dialogRef = this.dialog.open(StudentFormDialogComponent, {
+          width: '560px',
+          data: { availableRooms }
         });
+
+        dialogRef.afterClosed().subscribe(result => {
+          if (result) {
+            this.studentService.create(result).subscribe({
+              next: () => {
+                this.fetchStudents();
+                this.snackBar.open('Student added successfully', 'Close', { duration: 3000 });
+              },
+              error: (err) => {
+                console.error('Add student error', err);
+                this.snackBar.open(err.error?.message || 'Failed to add student', 'Close', { duration: 3000 });
+              }
+            });
+          }
+        });
+      },
+      error: (err) => {
+        this.snackBar.open('Failed to fetch rooms', 'Close', { duration: 3000 });
       }
     });
   }
@@ -218,9 +223,16 @@ export class StudentListComponent implements OnInit {
     });
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        // Implement delete API if needed, for now just refresh
-        this.fetchStudents();
-        this.snackBar.open('Student removed successfully', 'Close', { duration: 3000 });
+        this.studentService.delete(student.id).subscribe({
+          next: () => {
+            this.fetchStudents();
+            this.snackBar.open('Student removed successfully', 'Close', { duration: 3000 });
+          },
+          error: (err) => {
+            console.error('Delete student error', err);
+            this.snackBar.open(err.error?.message || 'Failed to remove student', 'Close', { duration: 3000 });
+          }
+        });
       }
     });
   }

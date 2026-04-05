@@ -22,4 +22,8 @@ export class NoticeService {
     deleteNotice(id: string): Observable<void> {
         return this.http.delete<void>(`/api/admin/notices/${id}`);
     }
+
+    toggleBookmark(id: string): Observable<boolean> {
+        return this.http.post<boolean>(`/api/notices/${id}/bookmark`, {});
+    }
 }
