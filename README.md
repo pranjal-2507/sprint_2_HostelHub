@@ -9,12 +9,16 @@ A professional, role-based hostel management system designed for efficiency and 
 - **Resource Management**: Complete CRUD operations for rooms and student records.
 - **Financial Tracking**: Automated fee generation and status monitoring.
 - **System Communications**: Centralized notice board management.
+  <img width="1100" height="791" alt="image" src="https://github.com/user-attachments/assets/53934b55-94b1-4293-902f-45ca0745dd8e" />
+
 
 ### Hosteler Experience
 - **Personalized Dashboard**: Instant access to room details and payment status.
 - **Digital Payments**: Comprehensive fee history and pending dues tracking.
 - **Issue Reporting**: Integrated complaint system with status tracking.
 - **Live Announcements**: Real-time critical notices from administration.
+  <img width="1916" height="867" alt="image" src="https://github.com/user-attachments/assets/bd27fdc3-b225-4c01-bc16-54c889bd3392" />
+
 
 ## Technology Stack
 
